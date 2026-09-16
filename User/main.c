@@ -7,42 +7,13 @@
  * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 
-/**
- * @file    main.c
- * @brief   应用入口：初始化各层驱动，然后用 Protothread 时间片调度四个任务
- *******************************************************************************
- * @note    时间片机制（见 Code/Task.h）：
- *            - TIM3 每 1ms 进一次中断，递减 PT_TICK[] 数组（见 Code/UserBsp/bsp_tick.c）；
- *            - 主循环里用 PT_TASK_REG(Rank, Func) 轮询四个任务，
- *              某任务的倒计时归零时才调用其函数，函数内 PT_WAIT_UNTIL 返回下次等待时间。
- *
- *          任务分配：
- *            Rank 0 : UsrDisplayTask —— 屏幕显示（10ms 周期）
- *            Rank 1 : UsrButtonTask  —— 按键事件回调（5ms 周期）
- *            Rank 2 : UsrSystemTask  —— 系统状态机（5ms 周期）
- *            Rank 3 : UsrTimeTask    —— 系统计时（10ms 周期）
- *
- *          分层结构：
- *            UserApp/  应用层：任务、状态机、界面逻辑
- *            UserBsp/  板级驱动层：LCD/SPI/按键/ADC
- *            UserDrv/  底层驱动层：节拍、板级 GPIO、外设底层
- *******************************************************************************
- */
+
 
 #include "main.h"
 #include "Task.h"
 
-#include "user_display.h"
-#include "user_button.h"
-#include "user_system.h"
-#include "user_time.h"
-#include "user_ws2812.h"
-#include "user_pd.h"
-
-#include "bsp_tick.h"
-#include "bsp_board.h"
+#include "bsp_time.h"
 #include "bsp_spi.h"
-#include "bsp_ws2812.h"
 
 /**
  * @brief  系统初始化
@@ -69,12 +40,6 @@ static void SystemInit_User(void)
 
     /* 3) 板级 GPIO：输出使能默认关断，避免上电即带载 */
     BspBoardInit();
-    printf("[GPIO] LCD RES=PA1 DC=PA2 CS=PA3 SCK=PA5 SDA=PA7\r\n");
-    printf("[GPIO] ADC VOUT=PA0 IBUS=PA4 VBUS=PC0\r\n");
-    printf("[GPIO] KEY1=PB3 KEY2=PB4 KEY3=PB6 raw=%u%u%u\r\n",
-           (unsigned int)GPIO_ReadInputDataBit(KEY1_PORT, KEY1_PIN),
-           (unsigned int)GPIO_ReadInputDataBit(KEY2_PORT, KEY2_PIN),
-           (unsigned int)GPIO_ReadInputDataBit(KEY3_PORT, KEY3_PIN));
 
     /* 4) 1ms 时间片节拍（TIM3） */
     BspTickInit();
@@ -85,7 +50,6 @@ static void SystemInit_User(void)
 
     /* 6) WS2812 PWM 输出：PB9 = TIM1_CH1，DMA1 Channel 5 */
     BspWs2812Init();
-    printf("[BOOT] scheduler start\r\n");
 }
 
 /*********************************************************************
@@ -101,26 +65,26 @@ int main(void)
 
     while (1)
     {
-#if USER_LCD_ENABLE
-        /* 显示任务：LCD 数据面板刷新 */
-        PT_TASK_REG(0, UsrDisplayTask);
-#else
-        /* LCD 已关闭：显示任务不注册，SPI1/DMA 只初始化不传输 */
-#endif
+// #if USER_LCD_ENABLE
+//         /* 显示任务：LCD 数据面板刷新 */
+//         PT_TASK_REG(0, UsrDisplayTask);
+// #else
+//         /* LCD 已关闭：显示任务不注册，SPI1/DMA 只初始化不传输 */
+// #endif
 
-        /* 按键任务：3 键事件扫描（单击/双击/长按） */
-        PT_TASK_REG(1, UsrButtonTask);
+//         /* 按键任务：3 键事件扫描（单击/双击/长按） */
+//         PT_TASK_REG(1, UsrButtonTask);
 
-        /* 系统任务：状态机推进（INIT -> POWER_ON -> RUNNING） */
-        PT_TASK_REG(2, UsrSystemTask);
+//         /* 系统任务：状态机推进（INIT -> POWER_ON -> RUNNING） */
+//         PT_TASK_REG(2, UsrSystemTask);
 
-        /* 时间任务：上电时间与开机时间累计 */
-        PT_TASK_REG(3, UsrTimeTask);
+//         /* 时间任务：上电时间与开机时间累计 */
+//         PT_TASK_REG(3, UsrTimeTask);
 
-        /* WS2812 任务：4 颗灯同步颜色渐变 */
-        PT_TASK_REG(4, UsrWs2812Task);
+//         /* WS2812 任务：4 颗灯同步颜色渐变 */
+//         PT_TASK_REG(4, UsrWs2812Task);
 
-        /* USB-PD Sink task: CC detection and contract negotiation. */
-        PT_TASK_REG(5, UsrPdTask);
+//         /* USB-PD Sink task: CC detection and contract negotiation. */
+//         PT_TASK_REG(5, UsrPdTask);
     }
 }

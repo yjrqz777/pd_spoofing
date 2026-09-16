@@ -18,7 +18,7 @@
 
 #include "bsp_lcd.h"
 #include "bsp_spi.h"
-#include "bsp_tick.h"
+#include "bsp_time.h"
 #include "st7789v/st7789v.h"
 
 /**

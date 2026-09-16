@@ -1,5 +1,5 @@
 /**
- * @file    bsp_tick.h
+ * @file    bsp_time.h
  * @brief   系统时间片节拍（1ms tick）底层驱动头文件
  *******************************************************************************
  * @note    使用 TIM3 更新中断产生 1ms 节拍，为 Task.h 的 protothread 调度器
@@ -16,8 +16,8 @@
  *******************************************************************************
  */
 
-#ifndef __BSP_TICK_H__
-#define __BSP_TICK_H__
+#ifndef __BSP_TIME_H__
+#define __BSP_TIME_H__
 
 #ifdef __cplusplus
 extern "C" {
