@@ -27,29 +27,18 @@
  */
 static void SystemInit_User(void)
 {
-    /* 1) 时钟与延时 */
+    /* 时钟与延时 */
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
     SystemCoreClockUpdate();
     Delay_Init();
 
-    /* 2) 调试串口（USART1，TX=PB10，对应 LOG-TX） */
     USART_Printf_Init(115200);
     printf("\r\n[BOOT] pd-spoofing start\r\n");
     printf("[BOOT] SYSCLK=%lu Hz ChipID=%08lx\r\n",
            (unsigned long)SystemCoreClock, (unsigned long)DBGMCU_GetCHIPID());
 
-    /* 3) 板级 GPIO：输出使能默认关断，避免上电即带载 */
     BspBoardInit();
-
-    /* 4) 1ms 时间片节拍（TIM3） */
     BspTickInit();
-    printf("[TICK] TIM3 1ms started\r\n");
-
-    /* 5) LCD 的 SPI1 Mode 2 与 TX DMA 接口 */
-    BspSpiInit();
-
-    /* 6) WS2812 PWM 输出：PB9 = TIM1_CH1，DMA1 Channel 5 */
-    BspWs2812Init();
 }
 
 /*********************************************************************
