@@ -3,7 +3,8 @@
  * @brief   240x135 横屏仪表界面头文件（静态布局 + 局部刷新）
  *******************************************************************************
  * @note    界面划分（见 doc/LCD_DISPLAY_IMPLEMENTATION_PLAN.md §4）：
- *            - 顶部状态栏：左侧 "POWER MONITOR"，右侧 ONLINE / 空白；
+ *            - 满屏铺满：各区域直接贴到屏幕四边，不留外围边距；
+ *            - 顶部状态栏：左侧 "POWER MONITOR"，右侧 ONLINE / 空白（均为 16px）；
  *            - VBUS / VOUT 卡片：24px 大号数值 + 8px 单位；
  *            - POWER / IBUS / OUTPUT 三个小区域：16px 数值 + 开关槽。
  *

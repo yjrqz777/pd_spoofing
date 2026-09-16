@@ -43,8 +43,9 @@ except ImportError:  # pragma: no cover - 环境缺依赖时给出明确提示
 #: 24px 数字字库只包含数值格式化用得到的字符
 DIGIT_CHARS = "0123456789.-"
 
-#: 16px 字库在数字之外还需要 OUTPUT 区域的 ON/OFF 文字（O/N/F 三个字母）
-DIGIT_AND_SWITCH_CHARS = "0123456789.-ONF"
+#: 16px 字库在数字之外还需要 OUTPUT 区域的 ON/OFF 文字，
+#: 以及顶部状态栏的 "POWER MONITOR" / "ONLINE" 标题（需要全部用到的字母与空格）
+DIGIT_AND_SWITCH_CHARS = " 0123456789.-EFLIMNOPRTW"
 
 #: 8px 标签字库只包含界面实际用到的字符
 #: （大写字母、数字、空格、点、短横线、斜杠）

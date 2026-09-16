@@ -151,8 +151,8 @@ static void TestGlyphCoverage(void)
     CheckStringCovered("16px 开关文字", &g_tUiFontInter16, "ON");
     CheckStringCovered("16px 开关文字", &g_tUiFontInter16, "OFF");
 
-    CheckStringCovered("8px 标题", &g_tUiFontInter8, "POWER MONITOR");
-    CheckStringCovered("8px 连接状态", &g_tUiFontInter8, "ONLINE");
+    CheckStringCovered("16px 顶栏标题", &g_tUiFontInter16, "POWER MONITOR");
+    CheckStringCovered("16px 连接状态", &g_tUiFontInter16, "ONLINE");
     CheckStringCovered("8px 卡片标签", &g_tUiFontInter8, "VBUS");
     CheckStringCovered("8px 卡片标签", &g_tUiFontInter8, "VOUT");
     CheckStringCovered("8px 区域标签", &g_tUiFontInter8, "POWER");
@@ -226,18 +226,18 @@ static void TestMetricStability(void)
 /** @brief 布局约束检查（在渲染完一个场景之后调用） */
 static void TestLayout(void)
 {
-    static const Rect vbusCard = {8u, 30u, 109u, 54u};
-    static const Rect voutCard = {123u, 30u, 109u, 54u};
-    static const Rect powerTile = {8u, 90u, 85u, 37u};
-    static const Rect ibusTile = {99u, 90u, 61u, 37u};
-    static const Rect outputTile = {166u, 90u, 66u, 37u};
+    static const Rect vbusCard = {0u, 28u, 118u, 54u};
+    static const Rect voutCard = {122u, 28u, 118u, 54u};
+    static const Rect powerTile = {0u, 87u, 77u, 48u};
+    static const Rect ibusTile = {81u, 87u, 77u, 48u};
+    static const Rect outputTile = {162u, 87u, 78u, 48u};
 
-    static const Rect vbusAllowed[] = {{18u, 34u, 40u, 14u}, {18u, 53u, 88u, 24u}};
-    static const Rect voutAllowed[] = {{133u, 34u, 40u, 14u}, {133u, 53u, 88u, 24u}};
-    static const Rect powerAllowed[] = {{16u, 92u, 40u, 12u}, {16u, 109u, 60u, 16u}};
-    static const Rect ibusAllowed[] = {{107u, 92u, 26u, 12u}, {107u, 109u, 50u, 16u}};
-    static const Rect outputAllowed[] = {{174u, 92u, 40u, 12u}, {174u, 109u, 32u, 16u},
-                                         {206u, 114u, 18u, 10u}};
+    static const Rect vbusAllowed[] = {{10u, 36u, 40u, 14u}, {10u, 51u, 88u, 24u}};
+    static const Rect voutAllowed[] = {{132u, 36u, 40u, 14u}, {132u, 51u, 88u, 24u}};
+    static const Rect powerAllowed[] = {{8u, 94u, 40u, 10u}, {8u, 113u, 60u, 16u}};
+    static const Rect ibusAllowed[] = {{89u, 94u, 40u, 10u}, {89u, 113u, 50u, 16u}};
+    static const Rect outputAllowed[] = {{170u, 94u, 40u, 10u}, {170u, 113u, 32u, 16u},
+                                         {213u, 114u, 18u, 10u}};
 
     printf("[3] 布局约束（区域内除设计矩形外必须仍是底色）\n");
 
@@ -254,10 +254,11 @@ static void TestLayout(void)
     CheckRegionBackground("OUTPUT 区域", (Rect){outputTile.x, outputTile.y, outputTile.w, outputTile.h},
                           COLOR_CARD_BG, outputAllowed, 3);
 
-    /* 顶部状态栏 */
+    /* 顶部状态栏（y=23 的分隔线单独检查，不纳入本区域） */
     {
-        static const Rect barAllowed[] = {{9u, 13u, 5u, 5u}, {18u, 10u, 70u, 12u}, {168u, 11u, 64u, 12u}};
-        CheckRegionBackground("顶部状态栏", (Rect){8u, 7u, 224u, 16u}, COLOR_PAGE_BG, barAllowed, 3);
+        static const Rect barAllowed[] = {{6u, 9u, 6u, 6u}, {18u, 4u, 142u, 16u},
+                                          {158u, 4u, 78u, 19u}};
+        CheckRegionBackground("顶部状态栏", (Rect){0u, 0u, 240u, 23u}, COLOR_PAGE_BG, barAllowed, 3);
     }
 
     /* 分隔线 */
@@ -265,7 +266,7 @@ static void TestLayout(void)
         int x;
         int ok = 1;
 
-        for (x = 8; x < 232; x++)
+        for (x = 0; x < 240; x++)
         {
             if (LcdSim_GetPixel((uint16_t)x, 23u) != COLOR_BORDER)
             {
@@ -282,10 +283,10 @@ static void TestLayout(void)
 
     /* 卡片边框 */
     {
-        int ok = (LcdSim_GetPixel(8u, 30u) == COLOR_BORDER) &&
-                 (LcdSim_GetPixel(116u, 83u) == COLOR_BORDER) &&
-                 (LcdSim_GetPixel(8u, 83u) == COLOR_BORDER) &&
-                 (LcdSim_GetPixel(116u, 30u) == COLOR_BORDER);
+        int ok = (LcdSim_GetPixel(0u, 28u) == COLOR_BORDER) &&
+                 (LcdSim_GetPixel(117u, 81u) == COLOR_BORDER) &&
+                 (LcdSim_GetPixel(0u, 81u) == COLOR_BORDER) &&
+                 (LcdSim_GetPixel(117u, 28u) == COLOR_BORDER);
 
         printf("    [%s] VBUS 卡片四角为边框色\n", ok ? " OK " : "FAIL");
         if (!ok)
@@ -294,8 +295,8 @@ static void TestLayout(void)
         }
     }
 
-    CheckRegionContains("VBUS 数值", (Rect){18u, 53u, 88u, 24u}, 0x46DCu);
-    CheckRegionContains("OUTPUT 绿色滑块", (Rect){206u, 114u, 18u, 10u}, COLOR_ON);
+    CheckRegionContains("VBUS 数值", (Rect){10u, 51u, 88u, 24u}, 0x46DCu);
+    CheckRegionContains("OUTPUT 绿色滑块", (Rect){213u, 114u, 18u, 10u}, COLOR_ON);
 }
 
 /* --------------------------------------------------------------------------- */

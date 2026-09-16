@@ -6,9 +6,10 @@
  *          支持单击、双击、长按、重复触发等事件。
  *
  *          事件绑定：
- *            - KEY1 单击：降低一个 PD 固定电压档。
- *            - KEY2 单击：提高一个 PD 固定电压档。
- *            - KEY3 单击：切换 VOUT-EN 输出。
+ *            - KEY1 单击：先关断输出，再降低一个 PD 固定电压档。
+ *            - KEY2 单击：先关断输出，再提高一个 PD 固定电压档。
+ *            - KEY3 双击：导通输出 VOUT-EN（防误触）。
+ *            - KEY3 单击：关断输出 VOUT-EN。
  *******************************************************************************
  */
 
@@ -93,10 +94,16 @@ static void UsrButtonIncreaseCallback(Button *ptButton)
     UsrButtonValueInc(ptButton);
 }
 
-static void UsrButtonOutputCallback(Button *ptButton)
+static void UsrButtonOutputOnCallback(Button *ptButton)
 {
     UsrButtonRecordEvent(ptButton);
-    UsrButtonOutputToggle(ptButton);
+    UsrButtonOutputOn(ptButton);
+}
+
+static void UsrButtonOutputOffCallback(Button *ptButton)
+{
+    UsrButtonRecordEvent(ptButton);
+    UsrButtonOutputOff(ptButton);
 }
 
 /**
@@ -113,11 +120,12 @@ void UsrButtonInit(void)
     button_init(&tButtonTwo, UsrButtonReadGpio, USER_BUTTON_ACTIVE_LEVEL, 2u);
     button_init(&tButtonThree, UsrButtonReadGpio, USER_BUTTON_ACTIVE_LEVEL, 3u);
 
-    /* KEY1 / KEY2：单击降低 / 提高 PD 固定电压档。 */
+    /* KEY1 / KEY2：单击降低 / 提高 PD 固定电压档（回调里先关断输出）。 */
     button_attach(&tButtonOne, BTN_SINGLE_CLICK, UsrButtonDecreaseCallback);
     button_attach(&tButtonTwo, BTN_SINGLE_CLICK, UsrButtonIncreaseCallback);
-    /* KEY3：单击切换 VOUT-EN 输出。 */
-    button_attach(&tButtonThree, BTN_SINGLE_CLICK, UsrButtonOutputCallback);
+    /* KEY3：双击导通输出（防误触），单击关断输出。 */
+    button_attach(&tButtonThree, BTN_DOUBLE_CLICK, UsrButtonOutputOnCallback);
+    button_attach(&tButtonThree, BTN_SINGLE_CLICK, UsrButtonOutputOffCallback);
     /* 全部按键记录事件到日志，便于调试 */
     button_attach(&tButtonOne, BTN_LONG_PRESS_START, UsrButtonRecordEvent);
     button_attach(&tButtonTwo, BTN_LONG_PRESS_START, UsrButtonRecordEvent);

@@ -38,6 +38,8 @@
 
 /* ========================================================================== *
  *  2. 布局常量（对应实施计划 §4.1，单位：像素）
+ *     布局为满屏铺满：内容不预留外围留白，左右两侧直接贴到 x=0/x=239，
+ *     底部贴到 y=134（唯一例外是顶部状态栏文字上方的 5~6px 呼吸空间）。
  *     所有矩形都已核算过：内容右边界 < 区域右边界 - 4px。
  * ========================================================================== */
 
@@ -46,30 +48,30 @@
 #define UI_LAYOUT_H           (135u)
 
 /* ---- 顶部状态栏 ---- */
-#define UI_BAR_X              (8u)
-#define UI_BAR_Y              (7u)
-#define UI_BAR_W              (224u)
-#define UI_BAR_DOT_X          (9u)
-#define UI_BAR_DOT_Y          (13u)
-#define UI_BAR_DOT_SIZE       (5u)
+#define UI_BAR_DOT_X          (6u)
+#define UI_BAR_DOT_Y          (9u)    /**< 与标题大写字母的视觉中心（y=12）对齐 */
+#define UI_BAR_DOT_SIZE       (6u)
 #define UI_BAR_TITLE_X        (18u)
-#define UI_BAR_BASELINE_Y     (19u)
+#define UI_BAR_BASELINE_Y     (18u)   /**< 16px 文字的基线（墨迹 6..18） */
+#define UI_BAR_LINE_X         (0u)
 #define UI_BAR_LINE_Y         (23u)
+#define UI_BAR_LINE_W         (UI_LAYOUT_W)
 
-/* 顶部状态栏右侧的连接状态（右对齐到状态栏右边界，"ONLINE" 宽 30px） */
-#define UI_BAR_STATUS_RIGHT   ((uint16_t)(UI_BAR_X + UI_BAR_W))
-#define UI_BAR_STATUS_RECT_X  (168u)
-#define UI_BAR_STATUS_RECT_Y  (11u)
-#define UI_BAR_STATUS_RECT_W  (64u)
-#define UI_BAR_STATUS_RECT_H  (12u)
+/* 顶部状态栏右侧的连接状态（16px，右对齐到屏幕右侧 6px 内边距） */
+#define UI_BAR_STATUS_RIGHT   (234u)
+#define UI_BAR_STATUS_RECT_X  (158u)
+#define UI_BAR_STATUS_RECT_Y  (4u)
+#define UI_BAR_STATUS_RECT_W  (78u)
+#define UI_BAR_STATUS_RECT_H  (19u)
 
 /* ---- VBUS / VOUT 卡片 ---- */
-#define UI_CARD_Y             (30u)
-#define UI_CARD_W             (109u)
+#define UI_CARD_Y             (28u)
+#define UI_CARD_W             (118u)  /**< (240 - 间距 4) / 2 */
 #define UI_CARD_H             (54u)
+#define UI_CARD_GAP           (4u)
 #define UI_CARD_PAD           (10u)
-#define UI_VBUS_X             (8u)
-#define UI_VOUT_X             (123u)
+#define UI_VBUS_X             (0u)
+#define UI_VOUT_X             ((uint16_t)(UI_VBUS_X + UI_CARD_W + UI_CARD_GAP))
 #define UI_CARD_LABEL_BASE_Y  ((uint16_t)(UI_CARD_Y + 15u))
 #define UI_CARD_VALUE_BASE_Y  ((uint16_t)(UI_CARD_Y + 41u))
 #define UI_CARD_VALUE_RECT_Y  ((uint16_t)(UI_CARD_Y + 23u))
@@ -77,26 +79,27 @@
 #define UI_CARD_VALUE_RECT_H  (24u)
 
 /* ---- POWER / IBUS / OUTPUT 三个平铺区域 ---- */
-#define UI_TILE_Y             (90u)
-#define UI_TILE_H             (37u)
+#define UI_TILE_Y             (87u)
+#define UI_TILE_H             (48u)
+#define UI_TILE_GAP           (4u)
 #define UI_TILE_PAD           (8u)
-#define UI_TILE_LABEL_BASE_Y  ((uint16_t)(UI_TILE_Y + 11u))
-#define UI_TILE_VALUE_BASE_Y  ((uint16_t)(UI_TILE_Y + 32u))
-#define UI_TILE_VALUE_RECT_Y  ((uint16_t)(UI_TILE_Y + 19u))
+#define UI_TILE_LABEL_BASE_Y  ((uint16_t)(UI_TILE_Y + 15u))
+#define UI_TILE_VALUE_BASE_Y  ((uint16_t)(UI_TILE_Y + 38u))
+#define UI_TILE_VALUE_RECT_Y  ((uint16_t)(UI_TILE_Y + 26u))
 #define UI_TILE_VALUE_RECT_H  (16u)
 
-#define UI_POWER_X            (8u)
-#define UI_POWER_W            (85u)
+#define UI_POWER_X            (0u)
+#define UI_POWER_W            (77u)
 #define UI_POWER_VALUE_X      ((uint16_t)(UI_POWER_X + UI_TILE_PAD))
 #define UI_POWER_VALUE_RECT_W (60u)   /**< "88.8" 38px + 间距 4 + "W" 8px = 50px */
 
-#define UI_IBUS_X             (99u)
-#define UI_IBUS_W             (61u)
+#define UI_IBUS_X             ((uint16_t)(UI_POWER_X + UI_POWER_W + UI_TILE_GAP))
+#define UI_IBUS_W             (77u)
 #define UI_IBUS_VALUE_X       ((uint16_t)(UI_IBUS_X + UI_TILE_PAD))
 #define UI_IBUS_VALUE_RECT_W  (50u)   /**< "9.99" 38px + 间距 4 + "A" 6px = 48px */
 
-#define UI_OUTPUT_X           (166u)
-#define UI_OUTPUT_W           (66u)
+#define UI_OUTPUT_X           ((uint16_t)(UI_IBUS_X + UI_IBUS_W + UI_TILE_GAP))
+#define UI_OUTPUT_W           ((uint16_t)(UI_LAYOUT_W - UI_OUTPUT_X))
 #define UI_OUTPUT_TEXT_X      ((uint16_t)(UI_OUTPUT_X + UI_TILE_PAD))
 #define UI_OUTPUT_TEXT_W      (32u)   /**< "OFF" 30px；右侧留给开关槽 */
 
@@ -104,7 +107,7 @@
 #define UI_UNIT_GAP           (4u)
 
 /* ---- 开关槽 ---- */
-#define UI_SWITCH_RECT_X      (206u)
+#define UI_SWITCH_RECT_X      (213u)
 #define UI_SWITCH_RECT_Y      (114u)
 #define UI_SWITCH_RECT_W      (18u)
 #define UI_SWITCH_RECT_H      (10u)
@@ -330,7 +333,7 @@ static void UiDashboard_DrawValueWithUnit(uint16_t u16ValueX, uint16_t u16Baseli
 /**
  * @brief  绘制顶部状态栏右侧的连接状态
  * @note   判据是"输入母线电压存在"，不做任何协议就绪的硬编码承诺；
- *         没有输入时整块留空。
+ *         没有输入时整块留空。文字用 16px 字库，与标题同号，保证可读性。
  */
 static void UiDashboard_DrawLinkStatus(void)
 {
@@ -348,9 +351,9 @@ static void UiDashboard_DrawLinkStatus(void)
         return;
     }
 
-    u16X = (uint16_t)(UI_BAR_STATUS_RIGHT - UiFont_MeasureText(&g_tUiFontInter8, pcText));
-    UiFont_DrawText((int16_t)u16X, (int16_t)(UI_BAR_BASELINE_Y + 1),
-                    &g_tUiFontInter8, UI_COLOR_VOUT_ON, UI_COLOR_PAGE_BG, pcText);
+    u16X = (uint16_t)(UI_BAR_STATUS_RIGHT - UiFont_MeasureText(&g_tUiFontInter16, pcText));
+    UiFont_DrawText((int16_t)u16X, (int16_t)UI_BAR_BASELINE_Y,
+                    &g_tUiFontInter16, UI_COLOR_VOUT_ON, UI_COLOR_PAGE_BG, pcText);
 }
 
 /**
@@ -413,7 +416,9 @@ static void UiDashboard_DrawLabel(uint16_t u16X, uint16_t u16BaselineY,
 /**
  * @brief  绘制只画一次的静态骨架
  * @note   整屏底色 + 顶部状态栏 + 两张卡片 + 三个平铺区域 + 全部标签。
+ *         所有区域都铺到屏幕边缘（无外围留白）。
  *         一次性阻塞约 45ms（整屏填充占绝大部分），只在进入本页时执行。
+ *         顶栏标题用 16px 字库：8px 在 1.14 寸屏上只有 1px 笔画，实际看不清。
  */
 static void UiDashboard_DrawStatic(void)
 {
@@ -424,8 +429,8 @@ static void UiDashboard_DrawStatic(void)
     UiDashboard_FillRounded(UI_BAR_DOT_X, UI_BAR_DOT_Y, UI_BAR_DOT_SIZE, UI_BAR_DOT_SIZE,
                             1u, UI_COLOR_VOUT_ON);
     UiFont_DrawText((int16_t)UI_BAR_TITLE_X, (int16_t)UI_BAR_BASELINE_Y,
-                    &g_tUiFontInter8, UI_COLOR_TEXT_MAIN, UI_COLOR_PAGE_BG, "POWER MONITOR");
-    LCD_FillRect(UI_BAR_X, UI_BAR_LINE_Y, UI_BAR_W, 1u, UI_COLOR_BORDER);
+                    &g_tUiFontInter16, UI_COLOR_TEXT_MAIN, UI_COLOR_PAGE_BG, "POWER MONITOR");
+    LCD_FillRect(UI_BAR_LINE_X, UI_BAR_LINE_Y, UI_BAR_LINE_W, 1u, UI_COLOR_BORDER);
 
     /* 3) VBUS / VOUT 卡片 */
     UiDashboard_DrawCard(UI_VBUS_X, UI_CARD_Y, UI_CARD_W, UI_CARD_H);
