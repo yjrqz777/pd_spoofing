@@ -89,6 +89,7 @@ eStatusDef BspAdcReadRaw(void)
     if(RESET == ADC_GetFlagStatus(ADC1, ADC_FLAG_JEOC)) /* 注入组转换完成标志 */
     {
         // memset(u16Raw,0x00,sizeof(u16Raw));
+        log_warn("ADC JEOC not set, no new data");
         return E_BUSY;
     }
     ADC_ClearFlag(ADC1, ADC_FLAG_JEOC);
@@ -103,6 +104,7 @@ uint16_t BspAdcGetRaw(eBspAdcChannelDef channel)
 {
     if(channel >= E_BSP_ADC_CH_MAX)
     {
+        log_error("ADC channel %d out of range", channel);
         return 0;
     }
     return u16Raw[channel];
