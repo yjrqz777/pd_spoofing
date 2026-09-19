@@ -21,7 +21,7 @@
  * @return  none
  */
 
-void BspIwdgInit(u16 prer, u16 rlr)
+void BspIwdgInit(uint16_t prer, uint16_t rlr)
 {
 	IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
 	IWDG_SetPrescaler(prer);

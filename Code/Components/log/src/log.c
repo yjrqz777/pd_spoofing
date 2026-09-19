@@ -21,7 +21,7 @@
  */
 
 #include "log.h"
-#include "bsp_time.h"   /* BspTickGetMs()：日志时间戳取上电毫秒计数 */
+#include "UserBsp/bsp_time.h"   /* BspTickGetMs()：日志时间戳取上电毫秒计数 */
 
 #define MAX_CALLBACKS 32
 

@@ -5,6 +5,6 @@
 
 #define IWDG_TASK_MS (1500)
 
-void BspIwdgInit(u16 prer, u16 rlr);
+void BspIwdgInit(uint16_t prer, uint16_t rlr);
 uint16_t BspIwdgTask(void);
 #endif 
