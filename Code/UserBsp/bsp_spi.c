@@ -23,7 +23,6 @@ void BspSpiInit(void)
     GPIO_InitTypeDef GPIO_InitStructure;
 
     memset(&GPIO_InitStructure, 0, sizeof(GPIO_InitStructure));
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 
 #if LCD_IO_STATIC_TEST_ENABLE
     uint32_t LcdPinMask;

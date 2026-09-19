@@ -20,7 +20,7 @@ static volatile uint32_t s_u32TimeMs = 0u; /* 系统毫秒计数 */
 /* ========================================================================== *
  *  函数实现
  * ========================================================================== */
-void BspTimeInit(void)
+void BspTime3Init(void)
 {
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
     NVIC_InitTypeDef        NVIC_InitStructure;
@@ -55,6 +55,41 @@ void BspTimeInit(void)
     /* 6) 启动计数 */
     TIM_Cmd(TIM3, ENABLE);
 }
+
+void BspTime1Init(void)
+{
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
+
+    memset(&TIM_TimeBaseInitStructure, 0, sizeof(TIM_TimeBaseInitStructure));
+
+    /* 时基：PSC=6 -> 1MHz；ARR=10 0.8Mhz = 1.25us  */
+    TIM_TimeBaseInitStructure.TIM_Period = 10 - 1;
+    TIM_TimeBaseInitStructure.TIM_Prescaler = SystemCoreClock / 8000000 - 1;
+    TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+    TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInit( TIM1, &TIM_TimeBaseInitStructure);
+
+    TIM_ARRPreloadConfig(TIM1, ENABLE);
+    TIM_Cmd(TIM1, ENABLE);
+}
+
+
+
+
+
+
+
+
+void BspTimeInit(void)
+{
+    BspTime1Init();
+    BspTime3Init();
+}
+
+
+
+
+
 
 uint32_t BspTimeGetMs(void)
 {

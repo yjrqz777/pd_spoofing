@@ -445,6 +445,7 @@ typedef union uByteToShortgDef
 #include "bsp_gpio.h"
 #include "bsp_time.h"
 #include "bsp_adc.h"
+#include "bsp_ws2812.h"
 
 #include "user_sensor.h"
 #endif /* __USER_GLOBAL_H__ */

@@ -14,9 +14,6 @@ void BspAdcInit(void)
     memset(&ADC_InitStructure, 0, sizeof(ADC_InitStructure));
     memset(&GPIO_InitStructure, 0, sizeof(GPIO_InitStructure));
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
-
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);   /* 必须在 ADC_DeInit 之前 */
 
     GPIO_InitStructure.GPIO_Pin = ADC_VBUS_PIN;
