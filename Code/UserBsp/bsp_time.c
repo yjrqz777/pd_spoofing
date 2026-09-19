@@ -1,6 +1,6 @@
 /**
- * @file    bsp_tick.c
- * @brief   系统时间片节拍（1ms tick）底层驱动实现
+ * @file    bsp_time.c
+ * @brief   定时器底层驱动实现（TIM3 系统节拍 + TIM1 时基）
  *******************************************************************************
  * @note    实现要点：
  *          1) TIM3 的 CK_INT 来自 HB 总线时钟（= HCLK = 48MHz），纯内部时钟源；
@@ -8,6 +8,10 @@
  *          3) TIM_TimeBaseInit() 末尾会置 UG 位，返回时 UIF 已为 1，
  *             因此必须在使能中断前先 TIM_ClearFlag()，否则会立刻误进一次中断；
  *          4) UIF 是 RW0（硬件置位、软件清零），中断内必须清。
+ *
+ *          资源约定：TIM1 的时基只在本文件的 BspTim1BaseInit() 中配置，
+ *          使用 TIM1 通道的模块（如 bsp_ws2812.c 用 CH1）不得再调用
+ *          TIM_TimeBaseInit()，否则会把先配置好的位周期改掉。
  *******************************************************************************
  */
 
@@ -16,7 +20,7 @@
 
 volatile uint32_t PT_TICK[TASK_MAX] = {0u}; /* pd 任务定时器数组 */
 
-static volatile uint32_t s_u32TimeMs = 0u; /* 系统毫秒计数 */
+static volatile uint32_t s_u32TimeMs = 0u;  /* 系统毫秒计数 */
 /* ========================================================================== *
  *  函数实现
  * ========================================================================== */
@@ -56,40 +60,29 @@ void BspTime3Init(void)
     TIM_Cmd(TIM3, ENABLE);
 }
 
-void BspTime1Init(void)
+void BspTim1BaseInit(void)
 {
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
-
     memset(&TIM_TimeBaseInitStructure, 0, sizeof(TIM_TimeBaseInitStructure));
 
-    /* 时基：PSC=6 -> 1MHz；ARR=10 0.8Mhz = 1.25us  */
-    TIM_TimeBaseInitStructure.TIM_Period = 10 - 1;
-    TIM_TimeBaseInitStructure.TIM_Prescaler = SystemCoreClock / 8000000 - 1;
-    TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-    TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit( TIM1, &TIM_TimeBaseInitStructure);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);   /* TIM1 时钟在 APB2，必须显式使能 */
 
-    TIM_ARRPreloadConfig(TIM1, ENABLE);
-    TIM_Cmd(TIM1, ENABLE);
+    TIM_TimeBaseInitStructure.TIM_Prescaler         = BSP_TIM1_PRESCALER;  /* 5  -> CK_CNT = 8MHz */
+    TIM_TimeBaseInitStructure.TIM_Period            = BSP_TIM1_PERIOD;     /* 9  -> 周期 1.25us  */
+    TIM_TimeBaseInitStructure.TIM_ClockDivision     = TIM_CKD_DIV1;
+    TIM_TimeBaseInitStructure.TIM_CounterMode       = TIM_CounterMode_Up;
+    TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0u;
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStructure);
+
+    TIM_ARRPreloadConfig(TIM1, ENABLE);                    /* ARR 预装载：在更新事件后生效 */
+    TIM_Cmd(TIM1, ENABLE);                                 /* 计数器总开关，CH1~CH4 共用 */
+
 }
-
-
-
-
-
-
-
 
 void BspTimeInit(void)
 {
-    BspTime1Init();
-    BspTime3Init();
+    BspTime3Init();                                        /* 系统节拍初始化（TIM3） */
 }
-
-
-
-
-
 
 uint32_t BspTimeGetMs(void)
 {

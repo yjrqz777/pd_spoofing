@@ -1,18 +1,21 @@
 /**
  * @file    bsp_time.h
- * @brief   系统时间片节拍（1ms tick）底层驱动头文件
+ * @brief   定时器底层驱动头文件（TIM3 系统节拍 + TIM1 时基）
  *******************************************************************************
- * @note    使用 TIM3 更新中断产生 1ms 节拍，为 Task.h 的 protothread 调度器
- *          提供时基，在中断内递减 PT_TICK[] 数组，并驱动按键扫描。
+ * @note    本模块是本工程唯一的“定时器资源”模块，两个定时器分工如下：
  *
- *          选型依据（见 CH32X035_1ms_tick_analysis.md）：
- *            - CH32X035 仅有 TIM1/TIM2（高级）+ TIM3（通用），无 TIM4；
- *            - TIM3 用于 1ms 系统节拍，TIM1 用于 WS2812 PWM，TIM2 仍空闲；
- *            - 纯内部 CK_INT 时钟源，不需要任何 GPIO/AFIO 重映射。
+ *          1) TIM3 —— 1ms 系统节拍
+ *             为 Task.h 的 protothread 调度器提供时基，在中断内递减 PT_TICK[]。
+ *             fTIMxCLK = HCLK = 48MHz；PSC = 47 -> CK_CNT = 1MHz；ARR = 999 -> 1ms
  *
- *          参数：fTIMxCLK = HCLK = 48MHz
- *                PSC = 47  -> CK_CNT = 1MHz
- *                ARR = 999 -> 更新周期 = 1000 / 1MHz = 1ms
+ *          2) TIM1 —— WS2812 位时序时基（CH1 输出，CH2~CH4 空闲）
+ *             时基由 WS2812 的位时序决定，CH1~CH4 共用同一计数器，因此四个通道
+ *             频率必然相同（800kHz），各通道只能独立设置占空比。
+ *             需要另一路独立频率的 PWM 请用 TIM2；输入捕获/触发源可共用本时基。
+ *             CK_CNT = 48MHz / (PSC+1) = 8MHz（PSC = 5）；周期 = 1.25us（ARR = 9）
+ *
+ *          选型依据见 CH32X035_1ms_tick_analysis.md：CH32X035 仅有
+ *          TIM1/TIM2（高级）+ TIM3（通用），无 TIM4；TIM2 仍空闲。
  *******************************************************************************
  */
 
@@ -23,6 +26,13 @@
 extern "C" {
 #endif
 #include "user_global.h"
+
+/* ========================================================================== *
+ *  TIM1 时基参数（WS2812 位时序，CH1~CH4 共用）
+ * ========================================================================== */
+#define BSP_TIM1_CK_CNT_HZ   (8000000u)
+#define BSP_TIM1_PRESCALER   ((uint16_t)((SystemCoreClock / BSP_TIM1_CK_CNT_HZ) - 1u)) /* 5 */
+#define BSP_TIM1_PERIOD      (10u - 1u)                                               /* 9 */
 
 /**
  * @brief  初始化并启动 1ms 系统节拍（TIM3）
@@ -38,8 +48,17 @@ void BspTimeInit(void);
  */
 uint32_t BspTimeGetMs(void);
 
+/**
+ * @brief  配置并启动 TIM1 时基（含 TIM1 时钟使能、ARR 预装载）
+ * @note   只负责“时基”，通道配置（CCMR/CCER/CCR、引脚、DMA）由使用方负责，
+ *         例如 bsp_ws2812.c 只配置 CH1 与 DMA1_Channel5。
+ *         重复调用只保留首次配置，避免后加入的通道改掉 WS2812 的位周期。
+ *         调用顺序要求：先 SystemCoreClockUpdate()，且在任何 TIM1 通道配置之前。
+ */
+void BspTim1BaseInit(void);
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __BSP_TICK_H__ */
+#endif /* __BSP_TIME_H__ */

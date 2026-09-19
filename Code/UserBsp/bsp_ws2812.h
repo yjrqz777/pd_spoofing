@@ -16,6 +16,9 @@ extern "C" {
 #define TIM_DMA_CH1_CH   DMA1_Channel5
 #define COLOR_BUFFER_LEN (((Pixel_NUM)*(3*8))+RESET_LEN)
 
+void BspWs2812Init(void);
+
+
 #ifdef __cplusplus
 }
 #endif
