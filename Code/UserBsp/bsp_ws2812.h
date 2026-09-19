@@ -8,6 +8,7 @@ extern "C" {
 #include "user_global.h"
 
 #define WS2812_PIXEL_NUM      (4u)    /* 级联灯珠数量 */
+
 #define WS2812_BITS_PER_PIXEL (24u)   /* 每颗 24 bit（GRB） */
 #define WS2812_RESET_SLOT_NUM (60u)   /* 复位槽：60 x 1.25us = 75us > 50us */
 #define WS2812_CODE_0         (3u)    /* 位 0 高电平：3/8MHz = 0.375us */

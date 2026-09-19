@@ -439,13 +439,16 @@ typedef union uByteToShortgDef
 #define _1111_1111 0xFF
 /** @} */
 
-#include "Components/log/src/log.h"
+#include "log/src/log.h"
 
 #include "bsp_iwdg.h"
 #include "bsp_gpio.h"
 #include "bsp_time.h"
 #include "bsp_adc.h"
 #include "bsp_ws2812.h"
+
+#include "ws2812/dev_ws2812.h"
+
 
 #include "user_sensor.h"
 #endif /* __USER_GLOBAL_H__ */

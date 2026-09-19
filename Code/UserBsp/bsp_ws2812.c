@@ -4,7 +4,7 @@
  * PWM 槽位缓冲：每颗灯珠 24 个槽（GRB 位），尾部 RESET_LEN 个槽输出常低，构成复位间隔。
  * 槽位内容 = TIM1_CH1 的比较值（CODE_0 / CODE_1）。
  */
-static uint16_t u16ColorSlot[WS2812_SLOT_NUM] = {0};
+static uint16_t s_au16ColorSlot[WS2812_SLOT_NUM] = {0};
 
 /** @brief 发送状态：1=空闲（可装载、可启动），0=上一帧还在发送 */
 static volatile uint8_t s_u8DmaIdle = 1u;
@@ -49,7 +49,7 @@ static void Ws2812DmaInit(void)
     DMA_DeInit(WS2812_DMA_CH);
     DMA_Cmd(WS2812_DMA_CH, DISABLE);
     DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) &TIM1->CH1CVR;
-    DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t) u16ColorSlot;
+    DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t) s_au16ColorSlot;
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
     DMA_InitStructure.DMA_BufferSize = WS2812_SLOT_NUM;
     DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
@@ -142,7 +142,7 @@ eStatusDef BspWs2812LoadBytes(const uint8_t *pu8Bytes, uint16_t u16Len)
         return E_BUSY;                       /* 发送中：不碰缓冲，避免波形撕裂 */
     }
 
-    pu16Slot = u16ColorSlot;
+    pu16Slot = s_au16ColorSlot;
     for (u16ByteIndex = 0u; u16ByteIndex < u16Len; u16ByteIndex++)
     {
         Ws2812EncodeByte(pu16Slot, pu8Bytes[u16ByteIndex]);
@@ -173,7 +173,7 @@ eStatusDef BspWs2812Show(void)
     DMA_Cmd(WS2812_DMA_CH, DISABLE);
     DMA_ClearFlag(DMA1_FLAG_TC5);                 /* 清掉上一次的完成标志 */
     DMA_SetCurrDataCounter(WS2812_DMA_CH, WS2812_SLOT_NUM);
-    WS2812_DMA_CH->MADDR = (uint32_t)u16ColorSlot; /* 重装源地址，防止计数跑偏后指针漂移 */
+    WS2812_DMA_CH->MADDR = (uint32_t)s_au16ColorSlot; /* 重装源地址，防止计数跑偏后指针漂移 */
     TIM_SetCounter(TIM1, 0u);
     TIM_SetCompare1(TIM1, 0u);                    /* 复位瞬间输出低电平 */
     DMA_Cmd(WS2812_DMA_CH, ENABLE);              /* 先备好 DMA... */

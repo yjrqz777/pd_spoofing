@@ -145,8 +145,8 @@
 							"${project}/Code/UserApp/ui",
 							"${project}/Code/UserApp/ui/fonts",
 							"${project}/Code/UserBsp",
-							"${project}/Code/UserBsp/st7789v",
-							"${project}/Code/UserDrv"
+							"${project}/Code/UserDev",
+							"${project}/Code/Components"
 						],
 						"include_system_paths": [],
 						"include_files": []
