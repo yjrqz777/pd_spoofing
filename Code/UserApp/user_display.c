@@ -6,10 +6,20 @@
 
 static void Ws2812Contorl(void)
 {
-    DevWs2812SetPixel(0,255,0,0);
-    DevWs2812SetPixel(1,0,255,0);
-    DevWs2812SetPixel(2,0,0,255);
-    DevWs2812SetPixel(3,255,255,255);
+    static uint8_t u8Red, u8Green, u8Blue;
+    ColorHsvToRgb(0, 255, 20, &u8Red, &u8Green, &u8Blue);
+    DevWs2812SetPixel(0,u8Red,u8Green,u8Blue);
+
+    ColorHsvToRgb(120, 255, 20, &u8Red, &u8Green, &u8Blue);
+    DevWs2812SetPixel(1,u8Red,u8Green,u8Blue);
+
+    ColorHsvToRgb(240, 255, 20, &u8Red, &u8Green, &u8Blue);
+    DevWs2812SetPixel(2,u8Red,u8Green,u8Blue);
+
+    ColorHsvToRgb(360, 0, 20, &u8Red, &u8Green, &u8Blue);
+    DevWs2812SetPixel(3,u8Red,u8Green,u8Blue);
+
+
 }
 
 

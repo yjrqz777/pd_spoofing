@@ -440,6 +440,7 @@ typedef union uByteToShortgDef
 /** @} */
 
 #include "Components/log/src/log.h"
+#include "Components/color/color.h"
 
 #include "UserBsp/bsp_iwdg.h"
 #include "UserBsp/bsp_gpio.h"
