@@ -10,10 +10,17 @@
 #ifndef __USER_GLOBAL_H__
 #define __USER_GLOBAL_H__
 
-#include "main.h"
-#include "Task.h"
+
+
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
+
+#include "Task.h"
+#include "user_config.h"
+
+#include "ch32x035.h"          /* 器件寄存器定义 + ch32x035_conf.h 外设声明 */
+#include "debug.h"             /* Delay_Init/Delay_Ms/Delay_Us/USART_Printf_Init */
 
 #define M_PI (3.14159265f)
 #define M_2PI (2.0f * M_PI)
@@ -424,5 +431,12 @@ typedef union uByteToShortgDef
 #define _1111_1110 0xFE
 #define _1111_1111 0xFF
 /** @} */
+
+
+#include "bsp_iwdg.h"
+#include "bsp_gpio.h"
+#include "bsp_time.h"
+#include "Components/log/src/log.h"      /* 因为 Code/ 已在 -I 里 */
+
 
 #endif /* __USER_GLOBAL_H__ */

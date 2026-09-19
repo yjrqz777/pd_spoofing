@@ -21,6 +21,7 @@
  */
 
 #include "log.h"
+#include "bsp_time.h"   /* BspTickGetMs()：日志时间戳取上电毫秒计数 */
 
 #define MAX_CALLBACKS 32
 
@@ -51,30 +52,29 @@ static const char *level_colors[] = {
 
 
 static void stdout_callback(log_Event *ev) {
-  char buf[16];
-  buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
+  /* 时间戳：上电毫秒计数换算为秒（不依赖 RTC / newlib time()） */
+  unsigned uptime_s = (unsigned) (BspTimeGetMs() / 1000u);
 #ifdef LOG_USE_COLOR
-  fprintf(
-    ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
-    buf, level_colors[ev->level], level_strings[ev->level],
+  printf(
+    "%us %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
+    uptime_s, level_colors[ev->level], level_strings[ev->level],
     ev->file, ev->line);
 #else
-  fprintf(
-    ev->udata, "%s %-5s %s:%d: ",
-    buf, level_strings[ev->level], ev->file, ev->line);
+  printf(
+    "%us %-5s %s:%d: ",
+    uptime_s, level_strings[ev->level], ev->file, ev->line);
 #endif
-  vfprintf(ev->udata, ev->fmt, ev->ap);
-  fprintf(ev->udata, "\n");
-  fflush(ev->udata);
+  vprintf(ev->fmt, ev->ap);
+  printf("\n");
+  fflush(stdout);
 }
 
 
 static void file_callback(log_Event *ev) {
-  char buf[64];
-  buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ev->time)] = '\0';
   fprintf(
-    ev->udata, "%s %-5s %s:%d: ",
-    buf, level_strings[ev->level], ev->file, ev->line);
+    ev->udata, "%us %-5s %s:%d: ",
+    (unsigned) (BspTimeGetMs() / 1000u), level_strings[ev->level],
+    ev->file, ev->line);
   vfprintf(ev->udata, ev->fmt, ev->ap);
   fprintf(ev->udata, "\n");
   fflush(ev->udata);
@@ -129,10 +129,8 @@ int log_add_fp(FILE *fp, int level) {
 
 
 static void init_event(log_Event *ev, void *udata) {
-  if (!ev->time) {
-    time_t t = time(NULL);
-    ev->time = localtime(&t);
-  }
+  /* 时间戳统一用 BspTickGetMs()：不再调用 newlib 的 time()/localtime()，
+     故 log_Event.time 保留定义但恒为 NULL（本工程不使用它） */
   ev->udata = udata;
 }
 
@@ -148,7 +146,7 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
   lock();
 
   if (!L.quiet && level >= L.level) {
-    init_event(&ev, stderr);
+    init_event(&ev, stdout);
     va_start(ev.ap, fmt);
     stdout_callback(&ev);
     va_end(ev.ap);

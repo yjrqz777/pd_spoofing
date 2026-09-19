@@ -14,7 +14,6 @@
 #ifndef __TASK_H__
 #define __TASK_H__
 
-#include "main.h"
 
 /**
  * @name   Protothread 状态常量

@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include "main.h"
+
 
 /**
  * @brief  初始化 LCD 显示屏

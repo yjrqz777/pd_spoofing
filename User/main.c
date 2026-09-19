@@ -7,25 +7,13 @@
  * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 
+#include "user_global.h"
 
-
-#include "main.h"
-#include "Task.h"
-
-#include "bsp_time.h"
-#include "bsp_spi.h"
 
 /**
  * @brief  系统初始化
- * @note   顺序要求：
- *           1) 时钟与延时基础（SystemCoreClockUpdate / Delay_Init）
- *           2) 串口打印（可选，用于调试日志）
- *           3) 板级 GPIO（含 LCD 控制线与按键、输出使能的安全默认电平）
- *           4) 1ms 时间片节拍（TIM3）—— 必须在任何依赖 BspTickGetMs 的驱动之前
- *           5) SPI1 Mode 2 + DMA（LCD 输出通道）
- *           6) TIM1_CH1 + DMA（4 颗 WS2812）
  */
-static void SystemInit_User(void)
+static void System_Init(void)
 {
     /* 时钟与延时 */
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
@@ -33,13 +21,35 @@ static void SystemInit_User(void)
     Delay_Init();
 
     USART_Printf_Init(115200);
-    printf("\r\n[BOOT] pd-spoofing start\r\n");
-    printf("[BOOT] SYSCLK=%lu Hz ChipID=%08lx\r\n",
-           (unsigned long)SystemCoreClock, (unsigned long)DBGMCU_GetCHIPID());
 
-    BspBoardInit();
-    BspTickInit();
+    printf("           _                              __ _             \r\n");
+    printf(" _ __   __| |      ___ _ __   ___   ___  / _(_)_ __   __ _ \r\n");
+    printf("| '_ \\ / _` |_____/ __| '_ \\ / _ \\ / _ \\| |_| | '_ \\ / _` |\r\n");
+    printf("| |_) | (_| |_____\\__ \\ |_) | (_) | (_) |  _| | | | | (_| |\r\n");
+    printf("| .__/ \\__,_|     |___/ .__/ \\___/ \\___/|_| |_|_| |_|\\__, |\r\n");
+    printf("|_|                   |_|                            |___/ \r\n");
+
+    printf("SYSCLK=%lu Hz ChipID=%08lx\r\n",
+           (unsigned long)SystemCoreClock, (unsigned long)DBGMCU_GetCHIPID());
+    printf("\rby:YJRQZ777\n");
+    
 }
+/**
+ * @brief  初始化
+ */
+static void User_Init(void)
+{
+    log_set_level(LOG_INFO);
+    BspIwdgInit(IWDG_Prescaler_32, 4000 );   // 2.7s IWDG reset
+    BspGpioInit();
+    BspTimeInit();
+log_debug("ADC raw vout=%u ibus=%u", 1, 1);
+log_info("VBUS=%u mV, VOUT=%.3f V", 1, 1);
+log_warn("VBUS %u mV 低于门限", 1);
+log_error("PD 协商超时, state=%d", 1);
+log_fatal("IWDG 复位前现场: ...");
+}
+
 
 /*********************************************************************
  * @fn      main
@@ -50,30 +60,10 @@ static void SystemInit_User(void)
  */
 int main(void)
 {
-    SystemInit_User();
-
+    System_Init();
+    User_Init();
     while (1)
     {
-// #if USER_LCD_ENABLE
-//         /* 显示任务：LCD 数据面板刷新 */
-//         PT_TASK_REG(0, UsrDisplayTask);
-// #else
-//         /* LCD 已关闭：显示任务不注册，SPI1/DMA 只初始化不传输 */
-// #endif
-
-//         /* 按键任务：3 键事件扫描（单击/双击/长按） */
-//         PT_TASK_REG(1, UsrButtonTask);
-
-//         /* 系统任务：状态机推进（INIT -> POWER_ON -> RUNNING） */
-//         PT_TASK_REG(2, UsrSystemTask);
-
-//         /* 时间任务：上电时间与开机时间累计 */
-//         PT_TASK_REG(3, UsrTimeTask);
-
-//         /* WS2812 任务：4 颗灯同步颜色渐变 */
-//         PT_TASK_REG(4, UsrWs2812Task);
-
-//         /* USB-PD Sink task: CC detection and contract negotiation. */
-//         PT_TASK_REG(5, UsrPdTask);
+        PT_TASK_REG(0, BspIwdgTask);
     }
 }

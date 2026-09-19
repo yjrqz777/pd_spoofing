@@ -22,8 +22,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "main.h"
+#include "user_global.h"
 
 /**
  * @brief  初始化并启动 1ms 系统节拍（TIM3）
@@ -31,13 +30,13 @@ extern "C" {
  *         函数返回前已完成：时钟使能、时基配置、UIF 清零、
  *         更新中断使能、NVIC 配置、计数器启动。
  */
-void BspTickInit(void);
+void BspTimeInit(void);
 
 /**
  * @brief  获取系统上电以来的毫秒计数
  * @return 毫秒计数（TIM3 中断内累加）
  */
-uint32_t BspTickGetMs(void);
+uint32_t BspTimeGetMs(void);
 
 #ifdef __cplusplus
 }

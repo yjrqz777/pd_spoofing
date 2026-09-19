@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-#include "main.h"
+
 
 #define BSP_SPI_TIMEOUT_COUNT (0x100000u) /* Peripheral polling timeout. */
 
