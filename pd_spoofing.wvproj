@@ -28,7 +28,7 @@
 				"name": "*.wvproj"
 			}
 		],
-		"projectName": "CH32X035G8U",
+		"projectName": "pd_spoofing",
 		"architecture": "RISC-V",
 		"projectType": "c"
 	},
@@ -337,7 +337,7 @@
 	"flashConfig": {
 		"mcutype": "CH32X035",
 		"address": "0x08000000",
-		"target_path": "obj/CH32X035G8U.hex",
+		"target_path": "obj/pd_spoofing.hex",
 		"clkSpeed": "High",
 		"debug_interface_mode": "1-wire serial",
 		"erase": true,
@@ -418,8 +418,8 @@
 			"showDebugOutputTimestamps": true
 		},
 		"reserve": {
-			"PROGRAM_NAME": "obj/CH32X035G8U.elf",
-			"PROJECT_ATTR": "CH32X035G8U",
+			"PROGRAM_NAME": "obj/pd_spoofing.elf",
+			"PROJECT_ATTR": "pd_spoofing",
 			"PROJECT_BUILD_CONFIG_AUTO_ATTR": true,
 			"PROJECT_BUILD_CONFIG_ID_ATTR": "",
 			"ATTR_BUILD_BEFORE_LAUNCH_ATTR": 2,

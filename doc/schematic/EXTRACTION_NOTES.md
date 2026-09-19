@@ -24,8 +24,8 @@
 ```powershell
 python -c @"
 import fitz
-src=r'D:\document\code\wsh\code\CH32X035G8U\doc\SCH_Schematic1_2026-09-14.pdf'
-out=r'D:\document\code\wsh\code\CH32X035G8U\doc\schematic'
+src=r'D:\document\code\wsh\code\pd_spoofing\doc\SCH_Schematic1_2026-09-14.pdf'
+out=r'D:\document\code\wsh\code\pd_spoofing\doc\schematic'
 d=fitz.open(src); pg=d[0]
 open(out+r'\01_textlayer_raw.txt','w',encoding='utf-8').write(pg.get_text())
 lines=['x_pt\ty_pt\tsize\ttext']
@@ -47,8 +47,8 @@ open(out+r'\02_textlayer_coords.tsv','w',encoding='utf-8').write('\n'.join(lines
 ```powershell
 python -c @"
 import fitz
-src=r'D:\document\code\wsh\code\CH32X035G8U\doc\SCH_Schematic1_2026-09-14.pdf'
-sd=r'D:\document\code\wsh\code\CH32X035G8U\doc\schematic\crops'
+src=r'D:\document\code\wsh\code\pd_spoofing\doc\SCH_Schematic1_2026-09-14.pdf'
+sd=r'D:\document\code\wsh\code\pd_spoofing\doc\schematic\crops'
 d=fitz.open(src); pg=d[0]
 for k,(x0,y0,x1,y1) in {
  '01_usb_pd_input':(80,20,470,180),
@@ -71,8 +71,8 @@ for k,(x0,y0,x1,y1) in {
 ```powershell
 python -c @"
 import fitz
-d=fitz.open(r'D:\document\code\wsh\code\CH32X035G8U\doc\SCH_Schematic1_2026-09-14.pdf')
-d[0].get_pixmap(matrix=fitz.Matrix(200/72,200/72)).save(r'D:\document\code\wsh\code\CH32X035G8U\doc\schematic\crops\00_full_page.png')
+d=fitz.open(r'D:\document\code\wsh\code\pd_spoofing\doc\SCH_Schematic1_2026-09-14.pdf')
+d[0].get_pixmap(matrix=fitz.Matrix(200/72,200/72)).save(r'D:\document\code\wsh\code\pd_spoofing\doc\schematic\crops\00_full_page.png')
 "@
 ```
 
