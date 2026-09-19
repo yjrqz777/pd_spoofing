@@ -449,6 +449,6 @@ typedef union uByteToShortgDef
 
 #include "UserDev/ws2812/dev_ws2812.h"
 
-
+#include "UserApp/user_display.h"
 #include "UserApp/user_sensor.h"
 #endif /* __USER_GLOBAL_H__ */

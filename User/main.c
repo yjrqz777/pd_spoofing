@@ -80,6 +80,7 @@ int main(void)
     {
         PT_TASK_REG(0, BspIwdgTask);
         PT_TASK_REG(1, BspSensorTask);
+        PT_TASK_REG(2, UserDisplayTask);
         
     }
 }
