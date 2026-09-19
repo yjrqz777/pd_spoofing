@@ -44,7 +44,7 @@ static const char *level_strings[] = {
   "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
 };
 
-#ifdef LOG_USE_COLOR
+#if LOG_USE_COLOR == 1
 static const char *level_colors[] = {
   "\x1b[94m", "\x1b[36m", "\x1b[32m", "\x1b[33m", "\x1b[31m", "\x1b[35m"
 };
@@ -54,7 +54,7 @@ static const char *level_colors[] = {
 static void stdout_callback(log_Event *ev) {
   /* 时间戳：上电毫秒计数换算为秒（不依赖 RTC / newlib time()） */
   unsigned uptime_s = (unsigned) (BspTimeGetMs() / 1000u);
-#ifdef LOG_USE_COLOR
+#if LOG_USE_COLOR == 1
   printf(
     "%us %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
     uptime_s, level_colors[ev->level], level_strings[ev->level],
@@ -65,7 +65,7 @@ static void stdout_callback(log_Event *ev) {
     uptime_s, level_strings[ev->level], ev->file, ev->line);
 #endif
   vprintf(ev->fmt, ev->ap);
-  printf("\n");
+  printf("\r\n");
   fflush(stdout);
 }
 
@@ -76,7 +76,7 @@ static void file_callback(log_Event *ev) {
     (unsigned) (BspTimeGetMs() / 1000u), level_strings[ev->level],
     ev->file, ev->line);
   vfprintf(ev->udata, ev->fmt, ev->ap);
-  fprintf(ev->udata, "\n");
+  fprintf(ev->udata, "\r\n");
   fflush(ev->udata);
 }
 

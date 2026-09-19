@@ -202,7 +202,7 @@
                 <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.printfloat.2044235126" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.printfloat" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                 <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.printf.888161142" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.printf" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                 <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.iqmath.1390292521" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.iqmath" useByScannerDiscovery="false" value="false" valueType="boolean"/>
-                <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.other.1683775650" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.other" useByScannerDiscovery="false" value="-u _printf_float" valueType="string"/>
+                <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.other.1683775650" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.c.linker.other" useByScannerDiscovery="false" value="" valueType="string"/>
                 <inputType id="ilg.gnumcueclipse.managedbuild.cross.riscv.tool.c.linker.input.1859223768" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.tool.c.linker.input">
                   <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
                   <additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -234,7 +234,7 @@
                 <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.printfloat.476377985" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.printfloat" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                 <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.printf.626387227" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.printf" useByScannerDiscovery="false" value="false" valueType="boolean"/>
                 <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.iqmath.1441123220" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.iqmath" useByScannerDiscovery="false" value="false" valueType="boolean"/>
-                <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.other.1748689212" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.other" useByScannerDiscovery="false" value="-u _printf_float" valueType="string"/>
+                <option id="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.other.1748689212" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.option.cpp.linker.other" useByScannerDiscovery="false" value="" valueType="string"/>
               </tool>
               <tool id="ilg.gnumcueclipse.managedbuild.cross.riscv.tool.archiver.1292785366" name="GNU RISC-V Cross Archiver" superClass="ilg.gnumcueclipse.managedbuild.cross.riscv.tool.archiver">
                 <outputType id="cdt.managedbuild.tool.gnu.archiver.output.1527226663" superClass="cdt.managedbuild.tool.gnu.archiver.output" outputPrefix="lib"/>

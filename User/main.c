@@ -31,23 +31,30 @@ static void System_Init(void)
 
     printf("SYSCLK=%lu Hz ChipID=%08lx\r\n",
            (unsigned long)SystemCoreClock, (unsigned long)DBGMCU_GetCHIPID());
-    printf("\rby:YJRQZ777\n");
+    printf("\rby:YJRQZ777\r\n");
     
 }
 /**
  * @brief  初始化
  */
 static void User_Init(void)
-{
-    log_set_level(LOG_INFO);
+{   
+    log_set_level(LOG_DEBUG);
+
+    log_debug("Init begin");
+
     BspIwdgInit(IWDG_Prescaler_32, 4000 );   // 2.7s IWDG reset
     BspGpioInit();
     BspTimeInit();
-log_debug("ADC raw vout=%u ibus=%u", 1, 1);
-log_info("VBUS=%u mV, VOUT=%.3f V", 1, 1);
-log_warn("VBUS %u mV 低于门限", 1);
-log_error("PD 协商超时, state=%d", 1);
-log_fatal("IWDG 复位前现场: ...");
+    BspAdcInit();
+    BspGpioSetVout(1);
+
+// log_debug("ADC raw vout=%u ibus=%u", 1, 1);
+// log_info("VBUS=%u mV, VOUT=%.3f V", 1, 1.1);
+// log_warn("VBUS %u mV 低于门限", 1);
+// log_error("PD 协商超时, state=%d", 1);
+// log_fatal("IWDG 复位前现场: ...");
+    log_debug("Init OK");
 }
 
 
@@ -65,5 +72,7 @@ int main(void)
     while (1)
     {
         PT_TASK_REG(0, BspIwdgTask);
+        PT_TASK_REG(1, BspSensorTask);
+        
     }
 }

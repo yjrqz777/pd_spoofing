@@ -238,7 +238,7 @@
 						"use_wch_printffloat": false,
 						"use_wch_printf": false,
 						"use_iqmath": false,
-						"other_linker_flags": "-u _printf_float"
+						"other_linker_flags": ""
 					}
 				},
 				"cpplinker": {
@@ -272,7 +272,7 @@
 						"use_wch_printffloat": false,
 						"use_wch_printf": false,
 						"use_iqmath": false,
-						"other_linker_flags": "-u _printf_float"
+						"other_linker_flags": ""
 					}
 				},
 				"archiver": {

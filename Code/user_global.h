@@ -432,11 +432,12 @@ typedef union uByteToShortgDef
 #define _1111_1111 0xFF
 /** @} */
 
+#include "Components/log/src/log.h"
 
 #include "bsp_iwdg.h"
 #include "bsp_gpio.h"
 #include "bsp_time.h"
-#include "Components/log/src/log.h"      /* 因为 Code/ 已在 -I 里 */
+#include "bsp_adc.h"
 
-
+#include "user_sensor.h"
 #endif /* __USER_GLOBAL_H__ */
