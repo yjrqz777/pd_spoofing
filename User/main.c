@@ -56,6 +56,12 @@ static void User_Init(void)
 // log_error("PD 协商超时, state=%d", 1);
 // log_fatal("IWDG 复位前现场: ...");
     log_debug("Init OK");
+
+    // {
+    //     static const uint8_t au8Grb[12] = { 0u,255u,0u,  0u,255u,0u,  0u,255u,0u,  0u,255u,0u }; /* 4 颗全绿 */
+    //     (void)BspWs2812LoadBytes(au8Grb, 12u);
+    //     (void)BspWs2812Show();
+    // }
 }
 
 
