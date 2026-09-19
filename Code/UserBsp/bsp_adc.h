@@ -14,6 +14,6 @@ typedef enum
 
 void BspAdcInit(void);
 void BspAdcStartInject(void);
-void BspAdcReadRaw(void);
+eStatusDef BspAdcReadRaw(void);   /* E_OK=本帧有效, E_BUSY=无新数据 */
 uint16_t BspAdcGetRaw(eBspAdcChannelDef channel);
 #endif 

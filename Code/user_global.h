@@ -73,6 +73,13 @@
 #define U16_HI(x)   ((unsigned char)(((unsigned int)(x) >> 8) & 0xFF))
 #define U16_LO(x)   ((unsigned char)(((unsigned int)(x)      ) & 0xFF))
 
+typedef enum
+{
+    E_OK = 0,        /**< 成功 */
+    E_ERROR,         /**< 失败 */
+    E_BUSY           /**< 忙 */
+} eStatusDef;
+
 typedef void (*FuncPtr)(void);
 typedef void (*FuncPtrParam)(void *);
 
