@@ -79,8 +79,9 @@ int main(void)
     while (1)
     {
         PT_TASK_REG(0, BspIwdgTask);
-        PT_TASK_REG(1, BspSensorTask);
-        PT_TASK_REG(2, UserDisplayTask);
+        PT_TASK_REG(1, BspSystemTask);
+        PT_TASK_REG(2, BspSensorTask);
+        PT_TASK_REG(3, UserDisplayTask);
         
     }
 }
