@@ -3,6 +3,7 @@
 
 #include "user_global.h"
 
+#define SYSTEM_TASK_MS (10)
 
 typedef enum eSystemStateDef
 {
@@ -19,8 +20,7 @@ typedef struct tSysDataDef
     uint16_t u16RunTime;
 } tSysDataDef;
 
-tSysDataDef tSysData;
-#define SYSTEM_TASK_MS (10)
+extern tSysDataDef tSysData;
 
 uint16_t BspSystemTask(void);
 

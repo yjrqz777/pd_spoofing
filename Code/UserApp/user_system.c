@@ -2,7 +2,7 @@
 
 tSysDataDef tSysData;
 
-static void SystemInit(void)
+static void UserSystemInit(void)
 {
     tSysData.eState = E_SYSTEM_POWERON;
     tSysData.u16PowerOnTime = 0u;
@@ -15,7 +15,7 @@ uint16_t BspSystemTask(void)
 {
     PT_BEGIN()
     {
-        SystemInit();
+        UserSystemInit();
     }
     while (1)
     {

@@ -449,6 +449,7 @@ typedef union uByteToShortgDef
 #include "UserBsp/bsp_ws2812.h"
 
 #include "UserDev/ws2812/dev_ws2812.h"
+#include "UserDev/button/dev_button.h"
 
 #include "UserApp/user_system.h"
 #include "UserApp/user_display.h"

@@ -52,7 +52,8 @@
 					"${project}/doc",
 					"${project}/Code/UserDev/st7789v",
 					"${project}/Code/UserBsp/bsp_lcd.c",
-					"${project}/Code/UserBsp/bsp_spi.c"
+					"${project}/Code/UserBsp/bsp_spi.c",
+					"${project}/Code/UserApp/button"
 				],
 				"optimization": {
 					"level": "size",
@@ -140,13 +141,7 @@
 							"${project}/Core",
 							"${project}/User",
 							"${project}/Peripheral/inc",
-							"${project}/Code",
-							"${project}/Code/UserApp",
-							"${project}/Code/UserApp/ui",
-							"${project}/Code/UserApp/ui/fonts",
-							"${project}/Code/UserBsp",
-							"${project}/Code/UserDev",
-							"${project}/Code/Components"
+							"${project}/Code"
 						],
 						"include_system_paths": [],
 						"include_files": []

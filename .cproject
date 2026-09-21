@@ -264,7 +264,7 @@
             </toolChain>
           </folderInfo>
           <sourceEntries>
-            <entry excluding="tools|doc|Code/UserDev/st7789v|Code/UserBsp/bsp_lcd.c|Code/UserBsp/bsp_spi.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+            <entry excluding="tools|doc|Code/UserDev/st7789v|Code/UserBsp/bsp_lcd.c|Code/UserBsp/bsp_spi.c|Code/UserApp/button" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
           </sourceEntries>
         </configuration>
       </storageModule>
