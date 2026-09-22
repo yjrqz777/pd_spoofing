@@ -21,6 +21,9 @@
 volatile uint32_t PT_TICK[TASK_MAX] = {0u}; /* pd 任务定时器数组 */
 
 static volatile uint32_t s_u32TimeMs = 0u;  /* 系统毫秒计数 */
+
+/** @brief 1ms 节拍回调（在 TIM3 中断上下文执行，可为 NULL） */
+static FuncPtr s_pfTickHandler = NULL;
 /* ========================================================================== *
  *  函数实现
  * ========================================================================== */
@@ -89,6 +92,21 @@ uint32_t BspTimeGetMs(void)
     return s_u32TimeMs;
 }
 
+void BspTimeAttachTickHandler(FuncPtr pfHandler)
+{
+    s_pfTickHandler = pfHandler;      /* 只在初始化阶段注册，主循环启动后不再改动 */
+}
+
+void BspIrqDisableAll(void)
+{
+    __disable_irq();                  /* Core/core_riscv.h：csrc mstatus, MIE */
+}
+
+void BspIrqEnableAll(void)
+{
+    __enable_irq();                   /* Core/core_riscv.h：csrs mstatus, MIE */
+}
+
 /**
  * @brief  TIM3 更新中断服务函数（1ms 系统节拍）
  * @note   RISC-V 中断必须带 WCH-Interrupt-fast 属性（与 ch32x035_it.c 写法一致）。
@@ -103,6 +121,10 @@ void TIM3_IRQHandler(void)
 
         s_u32TimeMs++;
         TASK_TICK_UPDATE();
-        // BspButtonScanTime();
+
+        if (s_pfTickHandler != NULL)
+        {
+            s_pfTickHandler();        /* 只调用注册进来的短函数，本模块不知道它是谁 */
+        }
     }
 }

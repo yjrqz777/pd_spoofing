@@ -454,4 +454,5 @@ typedef union uByteToShortgDef
 #include "UserApp/user_system.h"
 #include "UserApp/user_display.h"
 #include "UserApp/user_sensor.h"
+#include "UserApp/button/user_button.h"
 #endif /* __USER_GLOBAL_H__ */

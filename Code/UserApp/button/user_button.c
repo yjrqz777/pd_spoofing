@@ -1,217 +1,253 @@
 /**
  * @file    user_button.c
- * @brief   用户按键管理实现
- *******************************************************************************
- * @note    基于 multi-button 库的 3 按键管理（本板只有 KEY1/KEY2/KEY3）。
- *          支持单击、双击、长按、重复触发等事件。
+ * @brief   按键应用层：订阅表把（键组合, 事件）映射为产品行为，支持组合键注册。
  *
- *          事件绑定：
- *            - KEY1 单击：先关断输出，再降低一个 PD 固定电压档。
- *            - KEY2 单击：先关断输出，再提高一个 PD 固定电压档。
- *            - KEY3 双击：导通输出 VOUT-EN（防误触）。
- *            - KEY3 单击：关断输出 VOUT-EN。
- *******************************************************************************
+ * @note    扫描与消抖在 Device 层完成，本层只做"事件 → 业务"分发。
+ *          键值 E_BSP_KEY_x 为位值（1/2/4）：单键写一个键值，组合键写多个键
+ *          按位或（如 E_BSP_KEY_1 | E_BSP_KEY_2）。
+ *
+ *          组合键判定：同一拍内，组合条目中的每个键都产生了同一事件则命中，
+ *          命中后吃掉这些键的该事件（单键条目不再触发）。由于两个键几乎同时
+ *          抬起时，各自的单击事件最多相差 DEV_BTN_CLICK_WINDOW 才先后生成，
+ *          被"组合条目引用的事件"会先扣留 USR_BTN_COMBO_WAIT_MS 等待伙伴，
+ *          无人配对到期后按单键照常分发；未被组合引用的事件不受影响、立即分发。
  */
 
 #include "user_button.h"
 
-/** @brief 3 个按键的 Button 结构体实例 */
-static Button tButtonOne;
-static Button tButtonTwo;
-static Button tButtonThree;
+/* 单键事件为等组合伙伴而扣留的时长（须覆盖两键单击事件的最大时差） */
+#define USR_BTN_COMBO_WAIT_MS     (100u)
+#define USR_BTN_COMBO_WAIT_TICKS  (USR_BTN_COMBO_WAIT_MS / DEV_BTN_SCAN_MS)
 
-/** @brief 初始化完成标志 */
-static uint8_t u8ButtonInitialized = 0u;
+#define USR_BTN_SUB_NUM           (sizeof(s_atButtonSub) / sizeof(s_atButtonSub[0]))
 
-/** @brief 各按键上次触发事件记录 */
-static uint8_t au8ButtonLastEvent[USER_BUTTON_COUNT] = {0u};
+/* 订阅表：组合条目优先匹配；注册多条组合时表序即优先级，更长的组合写在前 */
+static const tUsrButtonSubDef s_atButtonSub[] =
+{
+    { E_BSP_KEY_1,               E_DEV_BTN_SINGLE_CLICK, UsrButtonValueDec },
+    { E_BSP_KEY_2,               E_DEV_BTN_SINGLE_CLICK, UsrButtonValueInc },
+    { E_BSP_KEY_1 | E_BSP_KEY_2, E_DEV_BTN_SINGLE_CLICK, UsrButtonValueDec },
+};
+
+/* 单键事件扣留槽：等待组合伙伴期间暂存，下标为键位索引 */
+typedef struct tUsrButtonHoldDef
+{
+    eDevButtonEventDef eEvent;   /* 正在扣留的事件；E_DEV_BTN_NONE = 空槽 */
+    uint8_t            u8Ticks;  /* 已扣留的任务拍数 */
+} tUsrButtonHoldDef;
+
+static tUsrButtonHoldDef s_atHold[E_BSP_KEY_NUM];
 
 /**
- * @brief  根据 ID 获取按键结构体指针
- * @param[in] button_id  按键 ID（1~3）
- * @return Button 结构体指针，无效 ID 返回 NULL
+ * @brief  判断事件是否被某个多键组合条目引用。
+ * @param[in] eEvent 事件。
+ * @return 1=被组合条目引用；0=否。
  */
-static Button *UsrButtonGetHandle(uint8_t u8ButtonId)
+static uint8_t UsrButtonEventHasCombo(eDevButtonEventDef eEvent)
 {
-    switch (u8ButtonId) {
-    case 1:
-        return &tButtonOne;
-    case 2:
-        return &tButtonTwo;
-    case 3:
-        return &tButtonThree;
-    default:
-        return 0;
+    uint8_t u8Entry;
+
+    for (u8Entry = 0u; u8Entry < (uint8_t)USR_BTN_SUB_NUM; u8Entry++)
+    {
+        if ((s_atButtonSub[u8Entry].eEvent == eEvent) &&
+            ((s_atButtonSub[u8Entry].u8KeyMask & (s_atButtonSub[u8Entry].u8KeyMask - 1u)) != 0u))
+        {
+            return 1u;
+        }
+    }
+    return 0u;
+}
+
+/**
+ * @brief  查找（单键位值, 事件）对应的订阅条目。
+ * @param[in] u8KeyBit 单键位值。
+ * @param[in] eEvent 事件。
+ * @return 条目指针；无则返回 NULL。
+ */
+static const tUsrButtonSubDef *UsrButtonFindSingle(uint8_t u8KeyBit, eDevButtonEventDef eEvent)
+{
+    uint8_t u8Entry;
+
+    for (u8Entry = 0u; u8Entry < (uint8_t)USR_BTN_SUB_NUM; u8Entry++)
+    {
+        if ((s_atButtonSub[u8Entry].eEvent == eEvent) &&
+            (s_atButtonSub[u8Entry].u8KeyMask == u8KeyBit))
+        {
+            return &s_atButtonSub[u8Entry];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief  撤销掩码内各键对事件的扣留（组合命中后调用）。
+ * @param[in] u8KeyMask 键位值掩码。
+ * @param[in] eEvent 事件。
+ */
+static void UsrButtonHoldCancel(uint8_t u8KeyMask, eDevButtonEventDef eEvent)
+{
+    uint8_t u8Index;
+
+    for (u8Index = 0u; u8Index < (uint8_t)E_BSP_KEY_NUM; u8Index++)
+    {
+        if (((u8KeyMask & (uint8_t)(1u << u8Index)) != 0u) &&
+            (s_atHold[u8Index].eEvent == eEvent))
+        {
+            s_atHold[u8Index].eEvent = E_DEV_BTN_NONE;
+        }
     }
 }
 
 /**
- * @brief  读取按键 GPIO 电平（multi-button HAL 接口）
- * @param[in] button_id  按键 ID
- * @return GPIO 引脚电平（0 或 1）
+ * @brief  扣留槽到期处理：等满配合窗仍无人配对则按单键分发。
  */
-static uint8_t UsrButtonReadGpio(uint8_t u8ButtonId)
+static void UsrButtonHoldTick(void)
 {
-    return BspButtonReadLevel(u8ButtonId);
+    uint8_t                 u8Index;
+    uint8_t                 u8KeyBit;
+    eDevButtonEventDef      eEvent;
+    const tUsrButtonSubDef *ptSub;
+
+    for (u8Index = 0u; u8Index < (uint8_t)E_BSP_KEY_NUM; u8Index++)
+    {
+        if (s_atHold[u8Index].eEvent == E_DEV_BTN_NONE)
+        {
+            continue;
+        }
+
+        u8KeyBit = (uint8_t)(1u << u8Index);
+        eEvent   = s_atHold[u8Index].eEvent;
+
+        if ((DevButtonPendingMask(eEvent) & u8KeyBit) == 0u)
+        {
+            s_atHold[u8Index].eEvent = E_DEV_BTN_NONE;    /* 已被组合条目消费 */
+            continue;
+        }
+
+        s_atHold[u8Index].u8Ticks++;
+        if (s_atHold[u8Index].u8Ticks >= (uint8_t)USR_BTN_COMBO_WAIT_TICKS)
+        {
+            s_atHold[u8Index].eEvent = E_DEV_BTN_NONE;
+            ptSub = UsrButtonFindSingle(u8KeyBit, eEvent);
+            DevButtonClearEvent(u8KeyBit, eEvent);
+            if (ptSub != NULL)
+            {
+                ptSub->fun();
+            }
+        }
+    }
 }
 
-/**
- * @brief  记录按键事件的通用回调
- * @param[in] btn  触发事件的按键结构体指针
- * @note   记录事件到按键历史数组，并打印调试信息。
- */
-static void UsrButtonRecordEvent(Button *ptButton)
+void UsrButtonProcessEvents(void)
 {
-    uint8_t Index;
-    ButtonEvent eEvent;
+    uint8_t                 u8Entry;
+    uint8_t                 u8Index;
+    uint8_t                 u8Pending;
+    uint8_t                 u8KeyBit;
+    uint8_t                 u8EventIdx;
+    const tUsrButtonSubDef *ptSub;
 
-    if ((ptButton == 0) || (ptButton->button_id == 0u) ||
-        (ptButton->button_id > USER_BUTTON_COUNT)) {
-        return;
+    /* 1) 组合键优先：组合条目内每个键都有同一事件待取时命中 */
+    for (u8Entry = 0u; u8Entry < (uint8_t)USR_BTN_SUB_NUM; u8Entry++)
+    {
+        ptSub = &s_atButtonSub[u8Entry];
+        if ((ptSub->u8KeyMask & (ptSub->u8KeyMask - 1u)) == 0u)
+        {
+            continue;                                     /* 单键条目 */
+        }
+
+        u8Pending = DevButtonPendingMask(ptSub->eEvent);
+        if ((u8Pending & ptSub->u8KeyMask) == ptSub->u8KeyMask)
+        {
+            ptSub->fun();
+            DevButtonClearEvent(ptSub->u8KeyMask, ptSub->eEvent);
+            UsrButtonHoldCancel(ptSub->u8KeyMask, ptSub->eEvent);
+        }
     }
 
-    Index = (uint8_t)(ptButton->button_id - 1u);
-    eEvent = button_get_event(ptButton);
-    au8ButtonLastEvent[Index] = (uint8_t)eEvent;
+    /* 2) 单键条目：被组合引用的事件先扣留，其余立即分发 */
+    for (u8Entry = 0u; u8Entry < (uint8_t)USR_BTN_SUB_NUM; u8Entry++)
+    {
+        ptSub = &s_atButtonSub[u8Entry];
+        if ((ptSub->u8KeyMask & (ptSub->u8KeyMask - 1u)) != 0u)
+        {
+            continue;                                     /* 组合条目 */
+        }
 
-    printf("KEY%u event:%u repeat:%u\r\n",
-           ptButton->button_id,
-           (uint8_t)eEvent,
-           button_get_repeat_count(ptButton));
-}
+        u8KeyBit  = ptSub->u8KeyMask;
+        u8Pending = DevButtonPendingMask(ptSub->eEvent);
+        if ((u8Pending & u8KeyBit) == 0u)
+        {
+            continue;
+        }
 
-static void UsrButtonDecreaseCallback(Button *ptButton)
-{
-    UsrButtonRecordEvent(ptButton);
-    UsrButtonValueDec(ptButton);
-}
+        if (UsrButtonEventHasCombo(ptSub->eEvent) == 0u)
+        {
+            ptSub->fun();                                 /* 无组合需求：立即分发 */
+            DevButtonClearEvent(u8KeyBit, ptSub->eEvent);
+            continue;
+        }
 
-static void UsrButtonIncreaseCallback(Button *ptButton)
-{
-    UsrButtonRecordEvent(ptButton);
-    UsrButtonValueInc(ptButton);
-}
+        u8Index = 0u;
+        while ((u8Index < (uint8_t)E_BSP_KEY_NUM) && (u8KeyBit != (uint8_t)(1u << u8Index)))
+        {
+            u8Index++;
+        }
+        if (u8Index >= (uint8_t)E_BSP_KEY_NUM)
+        {
+            continue;
+        }
 
-static void UsrButtonOutputOnCallback(Button *ptButton)
-{
-    UsrButtonRecordEvent(ptButton);
-    UsrButtonOutputOn(ptButton);
-}
-
-static void UsrButtonOutputOffCallback(Button *ptButton)
-{
-    UsrButtonRecordEvent(ptButton);
-    UsrButtonOutputOff(ptButton);
-}
-
-/**
- * @brief  初始化所有按键并绑定事件
- * @note   重复调用只执行一次。
- */
-void UsrButtonInit(void)
-{
-    if (u8ButtonInitialized != 0u) {
-        return;
+        if (s_atHold[u8Index].eEvent == E_DEV_BTN_NONE)
+        {
+            s_atHold[u8Index].eEvent  = ptSub->eEvent;
+            s_atHold[u8Index].u8Ticks = 0u;
+        }
+        else if (s_atHold[u8Index].eEvent != ptSub->eEvent)
+        {
+            /* 槽被同键的另一事件占用：放弃扣留立即分发，避免事件滞留 */
+            ptSub->fun();
+            DevButtonClearEvent(u8KeyBit, ptSub->eEvent);
+        }
     }
 
-    button_init(&tButtonOne, UsrButtonReadGpio, USER_BUTTON_ACTIVE_LEVEL, 1u);
-    button_init(&tButtonTwo, UsrButtonReadGpio, USER_BUTTON_ACTIVE_LEVEL, 2u);
-    button_init(&tButtonThree, UsrButtonReadGpio, USER_BUTTON_ACTIVE_LEVEL, 3u);
+    /* 3) 扣留到期：无人配对则按单键分发 */
+    UsrButtonHoldTick();
 
-    /* KEY1 / KEY2：单击降低 / 提高 PD 固定电压档（回调里先关断输出）。 */
-    button_attach(&tButtonOne, BTN_SINGLE_CLICK, UsrButtonDecreaseCallback);
-    button_attach(&tButtonTwo, BTN_SINGLE_CLICK, UsrButtonIncreaseCallback);
-    /* KEY3：双击导通输出（防误触），单击关断输出。 */
-    button_attach(&tButtonThree, BTN_DOUBLE_CLICK, UsrButtonOutputOnCallback);
-    button_attach(&tButtonThree, BTN_SINGLE_CLICK, UsrButtonOutputOffCallback);
-    /* 全部按键记录事件到日志，便于调试 */
-    button_attach(&tButtonOne, BTN_LONG_PRESS_START, UsrButtonRecordEvent);
-    button_attach(&tButtonTwo, BTN_LONG_PRESS_START, UsrButtonRecordEvent);
-    button_attach(&tButtonThree, BTN_LONG_PRESS_START, UsrButtonRecordEvent);
+    /* 4) 订阅表未引用的事件直接丢弃，防止待取位长期滞留 */
+    for (u8EventIdx = (uint8_t)E_DEV_BTN_DOWN; u8EventIdx < (uint8_t)E_DEV_BTN_COUNT; u8EventIdx++)
+    {
+        if (UsrButtonEventHasCombo((eDevButtonEventDef)u8EventIdx) != 0u)
+        {
+            continue;
+        }
 
-    button_start(&tButtonOne);
-    button_start(&tButtonTwo);
-    button_start(&tButtonThree);
+        for (u8Entry = 0u; u8Entry < (uint8_t)USR_BTN_SUB_NUM; u8Entry++)
+        {
+            if (s_atButtonSub[u8Entry].eEvent == (eDevButtonEventDef)u8EventIdx)
+            {
+                break;                                    /* 表内引用的事件不清 */
+            }
+        }
+        if (u8Entry < (uint8_t)USR_BTN_SUB_NUM)
+        {
+            continue;
+        }
 
-    u8ButtonInitialized = 1u;
-}
-
-/* ===================== 对外按键状态接口 ===================== */
-
-/**
- * @brief Reads the raw level mask for all board buttons.
- * @return Bit 0 through bit 2 contain the GPIO levels of KEY1 through KEY3.
- */
-uint8_t UsrButtonGetRawMask(void)
-{
-    return BspButtonGetRawMask();
-}
-
-/**
- * @brief Reports whether a button is in a pressed state.
- * @param[in] u8ButtonId Button identifier from 1 through 3.
- * @retval 1 The button is pressed.
- * @retval 0 The button is released or the identifier is invalid.
- */
-uint8_t UsrButtonGetPressed(uint8_t u8ButtonId)
-{
-    Button *ptButton = UsrButtonGetHandle(u8ButtonId);
-    int Pressed;
-
-    if (ptButton == 0) {
-        return 0u;
+        DevButtonClearEvent(0xFFu, (eDevButtonEventDef)u8EventIdx);
     }
-
-    Pressed = button_is_pressed(ptButton);
-    return (Pressed > 0) ? 1u : 0u;
 }
 
-/**
- * @brief Builds a mask of the currently pressed buttons.
- * @return Bit 0 through bit 2 indicate KEY1 through KEY3 respectively.
- */
-uint8_t UsrButtonGetPressedMask(void)
-{
-    uint8_t Mask = 0u;
-
-    if (UsrButtonGetPressed(1u) != 0u) Mask |= 0x01u;
-    if (UsrButtonGetPressed(2u) != 0u) Mask |= 0x02u;
-    if (UsrButtonGetPressed(3u) != 0u) Mask |= 0x04u;
-
-    return Mask;
-}
-
-/**
- * @brief Gets the most recently recorded event for a button.
- * @param[in] u8ButtonId Button identifier from 1 through 3.
- * @return A ButtonEvent value, or BTN_NONE_PRESS for an invalid identifier.
- */
-uint8_t UsrButtonGetLastEvent(uint8_t u8ButtonId)
-{
-    if ((u8ButtonId == 0u) || (u8ButtonId > USER_BUTTON_COUNT)) {
-        return (uint8_t)BTN_NONE_PRESS;
-    }
-
-    return au8ButtonLastEvent[u8ButtonId - 1u];
-}
-
-/**
- * @brief  Protothread 按键扫描协程任务
- * @return PT 状态码
- * @note   按键采样和消抖由 TIM3 中断驱动。本任务仅在主循环
- *         执行已排队的按键回调。
- */
 uint16_t UsrButtonTask(void)
 {
     PT_BEGIN()
     {
-        UsrButtonInit();
     }
 
     while (1)
     {
-        PT_WAIT_UNTIL(BUTTON_TIME_MS / OS_TICK_MS);
-        BspButtonProcessEvents();
+        PT_WAIT_UNTIL(DEV_BTN_SCAN_MS / OS_TICK_MS);   /* 5ms 时间片 */
+        UsrButtonProcessEvents();
     }
 
     PT_END();

@@ -7,7 +7,8 @@ static void ButtonInit(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure = {0};
     GPIO_InitStructure.GPIO_Pin = KEY1_PIN | KEY2_PIN | KEY3_PIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    /* 按键低电平有效：板上已有 10k 上拉 + 10nF，内部再开上拉提高抗扰度 */
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(KEY1_PORT, &GPIO_InitStructure);
 }

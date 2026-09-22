@@ -1,30 +1,39 @@
-﻿/**
+/**
  * @file    user_button.h
- * @brief   用户按键管理头文件 — 3 按键事件管理
- *******************************************************************************
- * @note    封装 multi-button 库，支持单击/双击/长按/重复等事件
- *******************************************************************************
+ * @brief   按键应用层：订阅表把（键组合, 事件）映射为产品行为，支持组合键注册。
  */
 
 #ifndef __USER_BUTTON_H__
 #define __USER_BUTTON_H__
 
-#include "User_global.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/** @brief 按键扫描调度周期（毫秒） */
-#define USR_BUTTON_TASK_INTERVAL_MS (5u)
+#include "user_global.h"
 
-/** @brief 冻结实现使用的兼容调度周期（毫秒） */
-#define BUTTON_TIME_MS (5u)
+/* 业务回调：订阅表命中时调用 */
+typedef void (*UsrButtonFunDef)(void);
 
-#define USER_BUTTON_COUNT        (3u) /* Board button count. */
-#define USER_BUTTON_ACTIVE_LEVEL (0u) /* Buttons are active low. */
+/* 订阅表条目：u8KeyMask 写单个键位值 = 普通键；写多个键按位或 = 组合键 */
+typedef struct tUsrButtonSubDef
+{
+    uint8_t            u8KeyMask;   /* E_BSP_KEY_x 按位或 */
+    eDevButtonEventDef eEvent;      /* 触发事件 */
+    UsrButtonFunDef    fun;         /* 命中后调用 */
+} tUsrButtonSubDef;
 
-void UsrButtonInit(void);
-uint8_t UsrButtonGetRawMask(void);
-uint8_t UsrButtonGetPressed(uint8_t u8ButtonId);
-uint8_t UsrButtonGetPressedMask(void);
-uint8_t UsrButtonGetLastEvent(uint8_t u8ButtonId);
-uint16_t UsrButtonTask(void);
+/* user_button_fun.c 提供的业务回调 */
+void UsrButtonOutputOn(void);
+void UsrButtonOutputOff(void);
+void UsrButtonValueDec(void);
+void UsrButtonValueInc(void);
+
+void     UsrButtonProcessEvents(void);   /* 取走并处理全部待处理事件（主循环上下文调用） */
+uint16_t UsrButtonTask(void);            /* 按键事件处理任务（5ms 时间片） */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __USER_BUTTON_H__ */

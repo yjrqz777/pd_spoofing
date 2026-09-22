@@ -57,6 +57,24 @@ uint32_t BspTimeGetMs(void);
  */
 void BspTim1BaseInit(void);
 
+/**
+ * @brief  注册 1ms 节拍回调。
+ * @param[in] pfHandler 回调函数；在 TIM3 更新中断上下文执行，必须极短、非阻塞；传 NULL 取消注册。
+ * @note   回调以函数指针方式调用，本模块不依赖任何上层模块。
+ */
+void BspTimeAttachTickHandler(FuncPtr pfHandler);
+
+/**
+ * @brief  关闭全局中断（进入临界区）。
+ * @note   只用于保护极短的“读-改-写”序列；不支持嵌套，进出必须成对。
+ */
+void BspIrqDisableAll(void);
+
+/**
+ * @brief  打开全局中断（退出临界区）。
+ */
+void BspIrqEnableAll(void);
+
 #ifdef __cplusplus
 }
 #endif

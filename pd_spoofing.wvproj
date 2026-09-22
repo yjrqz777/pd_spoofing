@@ -52,8 +52,7 @@
 					"${project}/doc",
 					"${project}/Code/UserDev/st7789v",
 					"${project}/Code/UserBsp/bsp_lcd.c",
-					"${project}/Code/UserBsp/bsp_spi.c",
-					"${project}/Code/UserApp/button"
+					"${project}/Code/UserBsp/bsp_spi.c"
 				],
 				"optimization": {
 					"level": "size",

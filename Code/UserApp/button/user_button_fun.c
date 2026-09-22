@@ -7,6 +7,7 @@
  *          改为本项目实际需要的：
  *            - KEY3 双击导通输出、单击关断输出（导通需双击，避免误触）；
  *            - KEY1 / KEY2 单击调整 PD 固定电压档，换档前先断开输出。
+ *          回调签名统一为 void(void)，由 user_button.c 的订阅表调用。
  *******************************************************************************
  */
 
@@ -35,46 +36,38 @@ static uint8_t UsrButtonSetOutput(uint8_t u8Enable)
 
 /**
  * @brief Turns the switched VOUT path on (KEY3 double click).
- * @param[in] ptButton Pointer to the button that triggered the action.
  * @note  Double click is required so that a stray touch cannot energise the output.
  */
-void UsrButtonOutputOn(Button *ptButton)
+void UsrButtonOutputOn(void)
 {
-    (void)ptButton;
     (void)UsrButtonSetOutput(1u);
 }
 
 /**
  * @brief Turns the switched VOUT path off (KEY3 single click).
- * @param[in] ptButton Pointer to the button that triggered the action.
  */
-void UsrButtonOutputOff(Button *ptButton)
+void UsrButtonOutputOff(void)
 {
-    (void)ptButton;
     (void)UsrButtonSetOutput(0u);
 }
 
 /**
  * @brief Requests the next lower fixed USB-PD voltage profile.
- * @param[in] ptButton Pointer to the button that triggered the action.
  * @note  The output is switched off first: changing the requested PDO while the
  *        output is live would step the load voltage.
  */
-void UsrButtonValueDec(Button *ptButton)
+void UsrButtonValueDec(void)
 {
-    (void)ptButton;
     (void)UsrButtonSetOutput(0u);
     UsrPdSelectPreviousPdo();
 }
 
 /**
  * @brief Requests the next higher fixed USB-PD voltage profile.
- * @param[in] ptButton Pointer to the button that triggered the action.
  * @note  Same as UsrButtonValueDec(): the output is switched off before the step.
  */
-void UsrButtonValueInc(Button *ptButton)
+void UsrButtonValueInc(void)
 {
-    (void)ptButton;
     (void)UsrButtonSetOutput(0u);
     UsrPdSelectNextPdo();
 }
