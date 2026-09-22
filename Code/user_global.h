@@ -439,20 +439,6 @@ typedef union uByteToShortgDef
 #define _1111_1111 0xFF
 /** @} */
 
-#include "Components/log/src/log.h"
-#include "Components/color/color.h"
-
-#include "UserBsp/bsp_iwdg.h"
-#include "UserBsp/bsp_gpio.h"
-#include "UserBsp/bsp_time.h"
-#include "UserBsp/bsp_adc.h"
-#include "UserBsp/bsp_ws2812.h"
-
-#include "UserDev/ws2812/dev_ws2812.h"
-#include "UserDev/button/dev_button.h"
-
-#include "UserApp/user_system.h"
-#include "UserApp/user_display.h"
-#include "UserApp/user_sensor.h"
-#include "UserApp/button/user_button.h"
+/* 模块头文件不再在此打包：BSP/Device/App 的接口由各自 .c/.h 直接包含。
+ * 本文件只提供公共宏、通用类型与芯片库/任务框架的基础头。 */
 #endif /* __USER_GLOBAL_H__ */

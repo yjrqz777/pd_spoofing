@@ -4,6 +4,7 @@
  */
 
 #include "dev_ws2812.h"
+#include "UserBsp/bsp_ws2812.h"      /* BspWs2812LoadBytes/BspWs2812Show */
 
 /** @brief 一帧的 GRB 字节缓冲，顺序即器件要求的发送顺序 */
 static uint8_t s_au8Frame[DEV_WS2812_FRAME_LEN] = {0u};

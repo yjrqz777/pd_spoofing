@@ -277,10 +277,10 @@ uint8_t DevButtonIsPressed(eBspButtonIdDef eKey)
  * @note   主循环上下文调用，用于组合键判定：组合条目内所有键的同一事件
  *         同时待取时视为组合命中。
  */
-uint8_t DevButtonPendingMask(eDevButtonEventDef eEvent)
+uint16_t DevButtonPendingMask(eDevButtonEventDef eEvent)
 {
     uint16_t Bit;
-    uint8_t  Mask = 0u;
+    uint16_t Mask = 0u;
     uint8_t  Index;
 
     if ((eEvent <= E_DEV_BTN_NONE) || (eEvent >= E_DEV_BTN_COUNT))
@@ -294,7 +294,7 @@ uint8_t DevButtonPendingMask(eDevButtonEventDef eEvent)
     {
         if ((s_atButton[Index].u16Pending & Bit) != 0u)
         {
-            Mask |= (uint8_t)(1u << Index);
+            Mask |= (uint16_t)(1u << Index);
         }
     }
     BspIrqEnableAll();
@@ -303,18 +303,18 @@ uint8_t DevButtonPendingMask(eDevButtonEventDef eEvent)
 }
 
 /**
- * @brief  清除 u8KeyMask 内各键的指定待取事件（消费但不触发）。
- * @param[in] u8KeyMask 键位值掩码，可含多个键。
+ * @brief  清除 u16KeyMask 内各键的指定待取事件（消费但不触发）。
+ * @param[in] u16KeyMask 键位值掩码，可含多个键。
  * @param[in] eEvent 事件。
  * @note   主循环上下文调用，配合 DevButtonPendingMask：组合键命中后吃掉
  *         各键的单键事件，避免单键条目重复触发。
  */
-void DevButtonClearEvent(uint8_t u8KeyMask, eDevButtonEventDef eEvent)
+void DevButtonClearEvent(uint16_t u16KeyMask, eDevButtonEventDef eEvent)
 {
     uint16_t Bit;
     uint8_t  Index;
 
-    if ((u8KeyMask == 0u) || (eEvent <= E_DEV_BTN_NONE) || (eEvent >= E_DEV_BTN_COUNT))
+    if ((u16KeyMask == 0u) || (eEvent <= E_DEV_BTN_NONE) || (eEvent >= E_DEV_BTN_COUNT))
     {
         return;
     }
@@ -323,7 +323,7 @@ void DevButtonClearEvent(uint8_t u8KeyMask, eDevButtonEventDef eEvent)
     BspIrqDisableAll();
     for (Index = 0u; Index < (uint8_t)E_BSP_KEY_NUM; Index++)
     {
-        if ((u8KeyMask & (uint8_t)(1u << Index)) != 0u)
+        if ((u16KeyMask & (uint16_t)(1u << Index)) != 0u)
         {
             s_atButton[Index].u16Pending &= (uint16_t)~Bit;
         }

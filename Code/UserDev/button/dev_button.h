@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "user_global.h"
+#include "UserBsp/bsp_gpio.h"      /* eBspButtonIdDef */
 
 /* 扫描与判定参数（单位 ms） */
 #define DEV_BTN_SCAN_MS       (5u)                          /* 扫描间隔 */
@@ -40,12 +40,13 @@ typedef enum
 
 /* 只暴露接口；按键上下文结构体保留在本模块的 .c 内。
  * 键值为位值（E_BSP_KEY_x = 1/2/4），可按位或组成组合键掩码；
- * GetEvent/IsPressed 只接受单键位值，PendingMask/ClearEvent 接受任意键组合掩码。 */
+ * GetEvent/IsPressed 只接受单键位值，PendingMask/ClearEvent 接受任意键组合掩码。
+ * 键掩码类型为 uint16_t：最多支持 16 个键位（bit0 到 bit15）。 */
 void               DevButtonInit(void);
 eDevButtonEventDef DevButtonGetEvent(eBspButtonIdDef eKey);
 uint8_t            DevButtonIsPressed(eBspButtonIdDef eKey);
-uint8_t            DevButtonPendingMask(eDevButtonEventDef eEvent);
-void               DevButtonClearEvent(uint8_t u8KeyMask, eDevButtonEventDef eEvent);
+uint16_t           DevButtonPendingMask(eDevButtonEventDef eEvent);
+void               DevButtonClearEvent(uint16_t u16KeyMask, eDevButtonEventDef eEvent);
 
 #ifdef __cplusplus
 }

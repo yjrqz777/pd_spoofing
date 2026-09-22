@@ -11,63 +11,21 @@
  *******************************************************************************
  */
 
+#include <stdio.h>
 #include "user_button.h"
 
-/**
- * @brief Applies a VOUT-EN level and keeps the status LED in sync.
- * @param[in] u8Enable Non-zero turns the switched output on, zero turns it off.
- * @retval 1 The output actually changed state.
- * @retval 0 The output was already in the requested state.
- */
-static uint8_t UsrButtonSetOutput(uint8_t u8Enable)
-{
-    if ((BspBoardGetVoutEnable() != 0u) == (u8Enable != 0u))
-    {
-        return 0u;
-    }
-
-    /* 状态确实变化才写 GPIO 与指示灯，并打印一次 */
-    BspBoardSetVoutEnable(u8Enable);
-    BspBoardSetLed(u8Enable);
-    printf("VOUT-EN -> %s\r\n", (u8Enable != 0u) ? "ON" : "OFF");
-
-    return 1u;
-}
-
-/**
- * @brief Turns the switched VOUT path on (KEY3 double click).
- * @note  Double click is required so that a stray touch cannot energise the output.
- */
 void UsrButtonOutputOn(void)
 {
-    (void)UsrButtonSetOutput(1u);
 }
 
-/**
- * @brief Turns the switched VOUT path off (KEY3 single click).
- */
 void UsrButtonOutputOff(void)
 {
-    (void)UsrButtonSetOutput(0u);
 }
 
-/**
- * @brief Requests the next lower fixed USB-PD voltage profile.
- * @note  The output is switched off first: changing the requested PDO while the
- *        output is live would step the load voltage.
- */
 void UsrButtonValueDec(void)
 {
-    (void)UsrButtonSetOutput(0u);
-    UsrPdSelectPreviousPdo();
 }
 
-/**
- * @brief Requests the next higher fixed USB-PD voltage profile.
- * @note  Same as UsrButtonValueDec(): the output is switched off before the step.
- */
 void UsrButtonValueInc(void)
 {
-    (void)UsrButtonSetOutput(0u);
-    UsrPdSelectNextPdo();
 }
