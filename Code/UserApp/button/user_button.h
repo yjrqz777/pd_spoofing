@@ -33,7 +33,8 @@ void UsrButtonValueInc(void);
 /* 订阅表容量：可注册的（键组合, 事件）条目上限 */
 #define USR_BTN_SUB_MAX (8u)
 
-/* 订阅表注册：先 Init 清表，再逐条 Register；注册顺序即匹配优先级。
+/* 订阅表注册：先 Init 清表，再逐条 Register。匹配是"键值掩码 + 事件"的精确匹配，
+ * 注册顺序不影响结果；键值掩码须与 Device 层 DevButtonRegisterKey() 注册的一致。
  * 须在进入主循环、UsrButtonTask() 开始调度之前完成，运行期不再改动。 */
 void     UsrButtonInit(void);
 uint8_t  UsrButtonRegister(uint16_t u16KeyMask, eDevButtonEventDef eEvent, UsrButtonFunDef fun);
