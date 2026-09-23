@@ -92,9 +92,9 @@ uint32_t BspTimeGetMs(void)
     return s_u32TimeMs;
 }
 
-void BspTimeAttachTickHandler(FuncPtr pfHandler)
+void BspTimeAttachTickCb(FuncPtr cb)
 {
-    s_pfTickHandler = pfHandler;      /* 只在初始化阶段注册，主循环启动后不再改动 */
+    s_pfTickHandler = cb;      /* 只在初始化阶段注册，主循环启动后不再改动 */
 }
 
 void BspIrqDisableAll(void)

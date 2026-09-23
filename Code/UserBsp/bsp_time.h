@@ -62,7 +62,7 @@ void BspTim1BaseInit(void);
  * @param[in] pfHandler 回调函数；在 TIM3 更新中断上下文执行，必须极短、非阻塞；传 NULL 取消注册。
  * @note   回调以函数指针方式调用，本模块不依赖任何上层模块。
  */
-void BspTimeAttachTickHandler(FuncPtr pfHandler);
+void BspTimeAttachTickCb(FuncPtr pfHandler);
 
 /**
  * @brief  关闭全局中断（进入临界区）。

@@ -16,15 +16,15 @@
 #define DEV_BTN_ACTIVE_LEVEL   (0u)      /* 本板按键低电平有效 */
 
 /* 扫描注册表：注册进来的键值掩码（单键或组合），表内顺序即上下文槽位顺序 */
-static uint16_t s_au16KeyMask[DEV_BTN_KEY_MAX];
-static uint8_t  s_u8KeyNum = 0u;
+static uint16_t s_aKeyMask[DEV_BTN_KEY_MAX];
+static uint8_t  s_keyNum = 0u;
 
 /* SPSC 队列：中断侧只写 Tail，主循环侧只写 Head */
 typedef struct
 {
     tDevButtonEventDef atItem[DEV_BTN_QUEUE_SIZE];   /* 环形缓冲：键值掩码 + 事件 */
-    uint16_t           u16Head;                      /* 消费者游标：主循环独占 */
-    uint16_t           u16Tail;                      /* 生产者游标：中断独占 */
+    uint16_t           u16Head;                      /* 头 消费者游标：主循环独占 */
+    uint16_t           u16Tail;                      /* 尾 生产者游标：中断独占 */
 } tDevButtonQueueDef;
 
 static volatile tDevButtonQueueDef s_tQueue;
@@ -52,7 +52,7 @@ typedef struct
 } tDevButtonDef;
 
 static tDevButtonDef s_atButton[DEV_BTN_KEY_MAX];
-static uint8_t       s_u8ScanDiv = 0u;
+
 
 /* ========================================================================== *
  *  以下为中断上下文代码
@@ -239,21 +239,21 @@ static void DevButtonUpdateSuppress(void)
     uint8_t Index;
     uint8_t Combo;
 
-    for (Index = 0u; Index < s_u8KeyNum; Index++)
+    for (Index = 0u; Index < s_keyNum; Index++)
     {
         if (s_atButton[Index].u8Level != DEV_BTN_ACTIVE_LEVEL)
         {
             continue;                                       /* 本项没按下 */
         }
 
-        for (Combo = 0u; Combo < s_u8KeyNum; Combo++)
+        for (Combo = 0u; Combo < s_keyNum; Combo++)
         {
-            if ((s_au16KeyMask[Combo] & (s_au16KeyMask[Combo] - 1u)) == 0u)
+            if ((s_aKeyMask[Combo] & (s_aKeyMask[Combo] - 1u)) == 0u)
             {
                 continue;                                   /* 不是组合项 */
             }
-            if ((s_au16KeyMask[Index] == s_au16KeyMask[Combo]) ||
-                ((s_au16KeyMask[Index] & s_au16KeyMask[Combo]) != s_au16KeyMask[Index]))
+            if ((s_aKeyMask[Index] == s_aKeyMask[Combo]) ||
+                ((s_aKeyMask[Index] & s_aKeyMask[Combo]) != s_aKeyMask[Index]))
             {
                 continue;                                   /* 自己 / 该组合项不覆盖本项 */
             }
@@ -268,22 +268,22 @@ static void DevButtonUpdateSuppress(void)
 
 /**
  * @brief  1ms 节拍回调：分频到 DEV_BTN_SCAN_MS 后扫描全部按键。
- * @note   由 BspTimeAttachTickHandler() 注册，运行在 TIM3 中断上下文。
+ * @note   由 BspTimeAttachTickCb() 注册，运行在 TIM3 中断上下文。
  */
 static void DevButtonTickHandler(void)
 {
-    uint8_t Index;
+    static uint8_t  timeCount = 0u;
+    uint8_t index;
 
-    s_u8ScanDiv++;
-    if (s_u8ScanDiv < (uint8_t)DEV_BTN_SCAN_MS)
+    if (++timeCount < (uint8_t)DEV_BTN_SCAN_MS)
     {
         return;
     }
-    s_u8ScanDiv = 0u;
+    timeCount = 0u;
 
-    for (Index = 0u; Index < s_u8KeyNum; Index++)
+    for (index = 0u; index < s_keyNum; index++)
     {
-        DevButtonHandler(&s_atButton[Index], s_au16KeyMask[Index]);   /* 按注册表逐项扫描 */
+        DevButtonHandler(&s_atButton[index], s_aKeyMask[index]);   /* 按注册表逐项扫描 */
     }
 
     DevButtonUpdateSuppress();                 /* 状态机跑完再按当前电平判组合压制 */
@@ -298,8 +298,8 @@ void DevButtonInit(void)
     uint8_t Index;
 
     memset(s_atButton, 0, sizeof(s_atButton));
-    memset(s_au16KeyMask, 0, sizeof(s_au16KeyMask));
-    s_u8KeyNum = 0u;
+    memset(s_aKeyMask, 0, sizeof(s_aKeyMask));
+    s_keyNum = 0u;
     s_tQueue.u16Head = 0u;
     s_tQueue.u16Tail = 0u;
     for (Index = 0u; Index < (uint8_t)DEV_BTN_KEY_MAX; Index++)
@@ -307,9 +307,8 @@ void DevButtonInit(void)
         /* 初值取有效电平的反值，避免上电瞬间被判成按下 */
         s_atButton[Index].u8Level = (uint8_t)(!DEV_BTN_ACTIVE_LEVEL);
     }
-    s_u8ScanDiv = 0u;
 
-    BspTimeAttachTickHandler(DevButtonTickHandler);   /* 注册到 1ms 节拍，须在进入主循环前调用 */
+    BspTimeAttachTickCb(DevButtonTickHandler);   /* 注册到 1ms 节拍，须在进入主循环前调用 */
 }
 
 /**
@@ -329,21 +328,21 @@ uint8_t DevButtonRegisterKey(uint16_t u16KeyMask)
         return 0u;
     }
 
-    for (Index = 0u; Index < s_u8KeyNum; Index++)
+    for (Index = 0u; Index < s_keyNum; Index++)
     {
-        if (s_au16KeyMask[Index] == u16KeyMask)
+        if (s_aKeyMask[Index] == u16KeyMask)
         {
             return 0u;                                  /* 重复注册 */
         }
     }
 
-    if (s_u8KeyNum >= (uint8_t)DEV_BTN_KEY_MAX)
+    if (s_keyNum >= (uint8_t)DEV_BTN_KEY_MAX)
     {
         return 0u;                                      /* 表已满 */
     }
 
-    s_au16KeyMask[s_u8KeyNum] = u16KeyMask;
-    s_u8KeyNum++;
+    s_aKeyMask[s_keyNum] = u16KeyMask;
+    s_keyNum++;
 
     return 1u;
 }
