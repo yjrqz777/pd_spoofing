@@ -4,8 +4,9 @@
  *
  * @note    中断路径（DevButtonTickHandler → DevButtonHandler）只做电平采样、消抖、
  *          状态机与入队。SPSC 队列是唯一的中断到主循环事件通道：单生产者为
- *          TIM3 中断，单消费者为主循环（DevButtonPopEvent 调用点）。
- *          扫描对象由 DevButtonRegisterKey() 注册进来，本模块不写死任何键。
+ *          TIM3 中断，单消费者为主循环（DevButtonProcessEvents 调用点）。
+ *          扫描对象与订阅关系都由 DevButtonRegister() 注册进来，本模块不写死任何键。
+ *          中断路径只入队，调回调发生在主循环的 DevButtonProcessEvents() 里。
  *          禁止在中断路径中调用 log/printf、浮点、延时或阻塞等待。
  */
 
@@ -18,6 +19,10 @@
 /* 扫描注册表：注册进来的键值掩码（单键或组合），表内顺序即上下文槽位顺序 */
 static uint16_t s_aKeyMask[DEV_BTN_KEY_MAX];
 static uint8_t  s_keyNum = 0u;
+
+/* 订阅表：注册进来的（键值掩码, 事件）→ 回调，表内顺序即匹配顺序 */
+static tDevButtonEventDef s_atSub[DEV_BTN_SUB_MAX];
+static uint8_t            s_subNum = 0u;
 
 /* SPSC 队列：中断侧只写 Tail，主循环侧只写 Head */
 typedef struct
@@ -299,7 +304,9 @@ void DevButtonInit(void)
 
     memset(s_atButton, 0, sizeof(s_atButton));
     memset(s_aKeyMask, 0, sizeof(s_aKeyMask));
+    memset(s_atSub, 0, sizeof(s_atSub));
     s_keyNum = 0u;
+    s_subNum = 0u;
     s_tQueue.u16Head = 0u;
     s_tQueue.u16Tail = 0u;
     for (Index = 0u; Index < (uint8_t)DEV_BTN_KEY_MAX; Index++)
@@ -312,58 +319,87 @@ void DevButtonInit(void)
 }
 
 /**
- * @brief  注册一个要扫描的键值掩码：单键写一个 E_BSP_KEY_x，组合键按位或。
- * @param[in] u16KeyMask 键值掩码，例如 E_BSP_KEY_1 | E_BSP_KEY_2。
- * @return 1=注册成功；0=掩码非法 / 重复注册 / 表已满。
+ * @brief  注册一条订阅：某键（或键组合）产生某事件时调用 fun。
+ * @param[in] u16KeyMask 键值掩码：单键写一个 E_BSP_KEY_x，组合键按位或。
+ * @param[in] eEvent 触发事件。
+ * @param[in] fun 命中后的回调。
+ * @return 1=注册成功；0=掩码非法 / 事件非法 / 回调为空 / 同键同事件重复 / 表已满。
  * @note   须在 DevButtonInit() 之后（Init 会清表）、主循环开始之前注册。
+ *         登记订阅的同时把键值记进扫描表（同一掩码只登记一次），注册即扫描；
  *         组合项的电平是掩码内所有键同时按下，出事件时键值就是这个掩码。
  */
-uint8_t DevButtonRegisterKey(uint16_t u16KeyMask)
+uint8_t DevButtonRegister(uint16_t u16KeyMask, eDevButtonEventDef eEvent, FuncPtr fun)
 {
-    uint8_t Index;
+    uint8_t index;
 
     if ((u16KeyMask == 0u) ||
         ((u16KeyMask & (uint16_t)~((1u << (uint8_t)E_BSP_KEY_NUM) - 1u)) != 0u))
     {
-        return 0u;
+        return 0u;                                      /* 掩码非法 */
+    }
+    if ((eEvent <= E_DEV_BTN_NONE) || (eEvent >= E_DEV_BTN_COUNT) || (fun == NULL))
+    {
+        return 0u;                                      /* 事件非法或回调为空 */
     }
 
-    for (Index = 0u; Index < s_keyNum; Index++)
+    for (index = 0u; index < s_subNum; index++)
     {
-        if (s_aKeyMask[Index] == u16KeyMask)
+        if ((s_atSub[index].u16KeyMask == u16KeyMask) &&
+            (s_atSub[index].eEvent == eEvent))
         {
-            return 0u;                                  /* 重复注册 */
+            return 0u;                                  /* 同键同事件重复 */
         }
     }
-
-    if (s_keyNum >= (uint8_t)DEV_BTN_KEY_MAX)
+    if (s_subNum >= (uint8_t)DEV_BTN_SUB_MAX)
     {
-        return 0u;                                      /* 表已满 */
+        return 0u;                                      /* 订阅表已满 */
     }
 
-    s_aKeyMask[s_keyNum] = u16KeyMask;
-    s_keyNum++;
+    for (index = 0u; (index < s_keyNum) && (s_aKeyMask[index] != u16KeyMask); index++)
+    {
+    }
+    if (index >= s_keyNum)                              /* 该键值还没进扫描表 */
+    {
+        if (s_keyNum >= (uint8_t)DEV_BTN_KEY_MAX)
+        {
+            return 0u;                                  /* 扫描表已满 */
+        }
+        s_aKeyMask[s_keyNum] = u16KeyMask;
+        s_keyNum++;
+    }
+
+    s_atSub[s_subNum].u16KeyMask = u16KeyMask;
+    s_atSub[s_subNum].eEvent     = eEvent;
+    s_atSub[s_subNum].fun        = fun;
+    s_subNum++;
 
     return 1u;
 }
 
 /**
- * @brief  从队列取出一个事件（取走即消费）。
- * @param[out] ptEvent 取到的事件：键值掩码 + 事件 id。
- * @return 1=取到事件；0=队列为空或参数为空。
- * @note   主循环上下文调用，是队列的唯一消费者。App 层逐条取走并查订阅表分发，
- *         不需要"查询不消费 / 事后清除"那种两步协议。
+ * @brief  取走并分发队列里所有待处理事件（出队 → 查订阅表 → 调回调）。
+ * @note   主循环上下文调用（UsrButtonTask 的 5ms 时间片），是队列的唯一消费者。
+ *         事件逐条消费，订阅表里没有对应条目的事件直接丢弃。
  */
-uint8_t DevButtonPopEvent(tDevButtonEventDef *ptEvent)
+void DevButtonProcessEvents(void)
 {
-    if ((ptEvent == NULL) || (s_tQueue.u16Head == s_tQueue.u16Tail))
+    tDevButtonEventDef tEvent;
+    uint8_t            index;
+
+    while (s_tQueue.u16Head != s_tQueue.u16Tail)
     {
-        return 0u;
+        tEvent.u16KeyMask = s_tQueue.atItem[s_tQueue.u16Head].u16KeyMask;
+        tEvent.eEvent     = s_tQueue.atItem[s_tQueue.u16Head].eEvent;
+        s_tQueue.u16Head = (uint16_t)((s_tQueue.u16Head + 1u) % (uint16_t)DEV_BTN_QUEUE_SIZE);
+
+        for (index = 0u; index < s_subNum; index++)
+        {
+            if ((s_atSub[index].u16KeyMask == tEvent.u16KeyMask) &&
+                (s_atSub[index].eEvent == tEvent.eEvent))
+            {
+                s_atSub[index].fun();
+                break;
+            }
+        }
     }
-
-    ptEvent->u16KeyMask = s_tQueue.atItem[s_tQueue.u16Head].u16KeyMask;
-    ptEvent->eEvent     = s_tQueue.atItem[s_tQueue.u16Head].eEvent;
-    s_tQueue.u16Head = (uint16_t)((s_tQueue.u16Head + 1u) % (uint16_t)DEV_BTN_QUEUE_SIZE);
-
-    return 1u;
 }

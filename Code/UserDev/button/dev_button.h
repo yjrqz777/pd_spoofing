@@ -2,12 +2,12 @@
  * @file    dev_button.h
  * @brief   按键设备层：在 1ms 节拍中断内分频扫描消抖，事件经 SPSC 队列交给主循环。
  *
- * @note    本模块属于 Device 层：只负责把 GPIO 电平变成按键事件。
- *          引脚与电平由 BSP 提供，事件对应什么行为由 Application 决定。
- *          要扫的键值掩码由 DevButtonRegisterKey() 注册（单键或组合键），
- *          中断侧按注册表逐项采样，产出（键值掩码, 事件 id）压入 SPSC 队列；
- *          组合项按住时压制成员的单击/双击（组合优先）。
- *          主循环侧在时间片内用 DevButtonPopEvent() 逐条取走并分发。
+ * @note    本模块属于 Device 层：把 GPIO 电平变成按键事件，并分发给注册的回调。
+ *          引脚与电平由 BSP 提供，事件对应什么行为由 Application 通过回调决定。
+ *          键值掩码与事件订阅都由 DevButtonRegister() 注册（单键或组合键，按位或），
+ *          登记订阅的同时把键值记进扫描表；中断侧按扫描表逐项采样，
+ *          产出（键值掩码, 事件 id）压入 SPSC 队列；组合项按住时压制成员的单击/双击。
+ *          主循环侧在时间片内用 DevButtonProcessEvents() 取空队列并查表回调。
  */
 
 #ifndef __DEV_BUTTON_H__
@@ -44,22 +44,28 @@ typedef enum
     E_DEV_BTN_COUNT          /* 事件总数（边界标记） */
 } eDevButtonEventDef;
 
-/* 一个按键事件：注册项的键值掩码 + 事件 id */
+/* 按键事件：键值掩码 + 事件；订阅表条目在此基础上再填 fun。
+ * 回调类型用 user_global.h 的 FuncPtr；队列条目不用 fun 字段，恒为 0。 */
 typedef struct
 {
     uint16_t           u16KeyMask;   /* 注册项的键值掩码（单键或组合的按位或） */
     eDevButtonEventDef eEvent;       /* 事件 */
+    FuncPtr            fun;          /* 命中后调用（只有订阅表填） */
 } tDevButtonEventDef;
+
+/* 可订阅的（键值掩码, 事件）条目上限 */
+#define DEV_BTN_SUB_MAX (8u)
 
 /* 只暴露接口；按键上下文与队列结构体保留在本模块的 .c 内。
  * 键值为位值（E_BSP_KEY_x = 1/2/4），可按位或组成组合键掩码；
  * 组合项的按下判定是"掩码内所有键同时按下"，出事件时键值就是这个掩码；
  * 组合项按住期间，被它覆盖的成员项本轮不出单击/双击结果（组合优先）。
  * 键掩码类型为 uint16_t：最多支持 16 个键位（bit0 到 bit15）。
- * 事件通道为 SPSC 队列：中断侧只入队，主循环侧用 DevButtonPopEvent() 逐条取走。 */
+ * DevButtonRegister() 登记（键值掩码, 事件）→ 回调并登记要扫的键值，注册即扫描；
+ * 同一（键值掩码, 事件）重复注册会被拒绝。 */
 void               DevButtonInit(void);
-uint8_t            DevButtonRegisterKey(uint16_t u16KeyMask);
-uint8_t            DevButtonPopEvent(tDevButtonEventDef *ptEvent);
+uint8_t            DevButtonRegister(uint16_t u16KeyMask, eDevButtonEventDef eEvent, FuncPtr fun);
+void               DevButtonProcessEvents(void);
 
 #ifdef __cplusplus
 }
