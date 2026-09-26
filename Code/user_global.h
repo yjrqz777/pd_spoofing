@@ -22,7 +22,7 @@
 #include "ch32x035.h"          /* 器件寄存器定义 + ch32x035_conf.h 外设声明 */
 #include "debug.h"             /* Delay_Init/Delay_Ms/Delay_Us/USART_Printf_Init */
 #include "Components/assert/assert.h"
-
+#include "Components/log/src/log.h"
 #define M_PI (3.14159265f)
 #define M_2PI (2.0f * M_PI)
 #define BIT(n)  (1U << (n)) /* 单个位掩码*/

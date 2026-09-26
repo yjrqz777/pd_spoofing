@@ -1,5 +1,4 @@
 #include "bsp_adc.h"
-#include "Components/log/src/log.h"
 
 static uint16_t u16Raw[E_BSP_ADC_CH_MAX] = {0};
 

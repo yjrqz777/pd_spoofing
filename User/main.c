@@ -9,8 +9,6 @@
 
 #include "user_global.h"
 
-#include "Components/log/src/log.h"
-
 #include "UserBsp/bsp_iwdg.h"
 #include "UserBsp/bsp_gpio.h"
 #include "UserBsp/bsp_time.h"

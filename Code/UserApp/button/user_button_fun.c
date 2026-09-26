@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include "user_button.h"
 #include "UserApp/user_system.h"
-#include "Components/log/src/log.h"
 void UsrButtonPdInc(void)
 {
     log_info("UsrButtonPdInc");
