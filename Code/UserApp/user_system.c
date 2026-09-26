@@ -27,7 +27,7 @@ static void SysTimerTick(void)
 }
 
 
-uint16_t BspSystemTask(void)
+uint16_t UserSystemTask(void)
 {
     PT_BEGIN()
     {

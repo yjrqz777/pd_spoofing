@@ -50,9 +50,7 @@
 				"excludeResources": [
 					"${project}/tools",
 					"${project}/doc",
-					"${project}/Code/UserDev/st7789v",
-					"${project}/Code/UserBsp/bsp_lcd.c",
-					"${project}/Code/UserBsp/bsp_spi.c"
+					"${project}/Code/UserBsp/bsp_lcd.c"
 				],
 				"optimization": {
 					"level": "size",

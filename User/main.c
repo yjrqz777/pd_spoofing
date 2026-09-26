@@ -14,9 +14,10 @@
 #include "UserBsp/bsp_time.h"
 #include "UserBsp/bsp_adc.h"
 #include "UserBsp/bsp_ws2812.h"
+#include "UserBsp/bsp_spi.h"
 
 #include "UserDev/button/dev_button.h"
-
+#include "UserDev/st7789v/dev_st7789v.h"
 #include "UserApp/user_system.h"
 #include "UserApp/user_display.h"
 #include "UserApp/user_sensor.h"
@@ -61,8 +62,11 @@ static void User_Init(void)
     BspTimeInit();
     BspWs2812Init();
     BspAdcInit();
-    BspGpioSetVout(1);
 
+    BspSpiInit();
+    BspGpioSetVout(1);
+    
+    DevSt7789vInit();
 // log_debug("ADC raw vout=%u ibus=%u", 1, 1);
 // log_info("VBUS=%u mV, VOUT=%.3f V", 1, 1.1);
 // log_warn("VBUS %u mV 低于门限", 1);
@@ -92,7 +96,7 @@ int main(void)
     while (1)
     {
         PT_TASK_REG(0, BspIwdgTask);
-        PT_TASK_REG(1, BspSystemTask);
+        PT_TASK_REG(1, UserSystemTask);
         PT_TASK_REG(2, BspSensorTask);
         PT_TASK_REG(3, UserDisplayTask);
         PT_TASK_REG(4, UsrButtonTask);

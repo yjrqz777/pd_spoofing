@@ -22,6 +22,6 @@ typedef struct tSysDataDef
 
 extern tSysDataDef tSysData;
 
-uint16_t BspSystemTask(void);
+uint16_t UserSystemTask(void);
 
 #endif 

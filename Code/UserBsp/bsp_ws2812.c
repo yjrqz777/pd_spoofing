@@ -1,5 +1,5 @@
 #include "bsp_ws2812.h"
-
+#include "UserBsp/bsp_time.h"
 /*
  * PWM 槽位缓冲：每颗灯珠 24 个槽（GRB 位），尾部 RESET_LEN 个槽输出常低，构成复位间隔。
  * 槽位内容 = TIM1_CH1 的比较值（CODE_0 / CODE_1）。
@@ -44,7 +44,7 @@ static void Ws2812DmaInit(void)
     memset(&DMA_InitStructure, 0, sizeof(DMA_InitStructure));
     memset(&NVIC_InitStructure, 0, sizeof(NVIC_InitStructure));
 
-    RCC_AHBPeriphClockCmd( RCC_AHBPeriph_DMA1, ENABLE);
+
 
     DMA_DeInit(WS2812_DMA_CH);
     DMA_Cmd(WS2812_DMA_CH, DISABLE);
@@ -78,6 +78,7 @@ static void Ws2812DmaInit(void)
 
 void BspWs2812Init(void)
 {
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
     BspTim1BaseInit();                                    /* TIM1 时基(PSC/ARR/启动)统一由 bsp_time.c 配置 */
     Ws2812GpioInit();
     Ws2812Time1OC1Init();
