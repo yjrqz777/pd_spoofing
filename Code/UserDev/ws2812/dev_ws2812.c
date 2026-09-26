@@ -56,6 +56,29 @@ eStatusDef DevWs2812SetPixel(uint16_t u16Index, uint8_t u8Red, uint8_t u8Green, 
 }
 
 /**
+ * @brief  Sets every pixel selected by a bit mask to the same color.
+ * @param[in] u8Mask  Bit mask: bit 0 selects pixel 0, bit 1 selects pixel 1, and so on.
+ * @param[in] u8Red   Red component.
+ * @param[in] u8Green Green component.
+ * @param[in] u8Blue  Blue component.
+ * @retval E_OK Always; bits at or above WS2812_PIXEL_NUM are ignored.
+ */
+eStatusDef DevWs2812SetMask(uint8_t u8Mask, uint8_t u8Red, uint8_t u8Green, uint8_t u8Blue)
+{
+    uint16_t Index;
+
+    for (Index = 0u; Index < (uint16_t)WS2812_PIXEL_NUM; Index++)
+    {
+        if ((u8Mask & (uint8_t)(1u << Index)) != 0u)
+        {
+            (void)DevWs2812SetPixel(Index, u8Red, u8Green, u8Blue);
+        }
+    }
+
+    return E_OK;
+}
+
+/**
  * @brief  Sets every pixel in the pending frame to the same color.
  */
 eStatusDef DevWs2812Fill(uint8_t u8Red, uint8_t u8Green, uint8_t u8Blue)

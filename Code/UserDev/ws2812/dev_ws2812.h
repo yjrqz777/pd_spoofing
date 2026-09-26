@@ -11,6 +11,7 @@ extern "C" {
 
 void       DevWs2812Init(void);
 eStatusDef DevWs2812SetPixel(uint16_t u16Index, uint8_t u8Red, uint8_t u8Green, uint8_t u8Blue);
+eStatusDef DevWs2812SetMask(uint8_t u8Mask, uint8_t u8Red, uint8_t u8Green, uint8_t u8Blue);
 eStatusDef DevWs2812Fill(uint8_t u8Red, uint8_t u8Green, uint8_t u8Blue);
 eStatusDef DevWs2812Flush(void);
 
