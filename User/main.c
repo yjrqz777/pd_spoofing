@@ -61,7 +61,6 @@ static void User_Init(void)
     BspIwdgInit(IWDG_Prescaler_32, 4000 );   // 2.7s IWDG reset
     BspGpioInit();
     BspTimeInit();
-    DevButtonInit();
     BspWs2812Init();
     BspAdcInit();
     BspGpioSetVout(1);

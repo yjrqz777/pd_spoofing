@@ -52,18 +52,27 @@ void BspLedToggle(void)
     GPIO_WriteBit(LED_RUN_PORT, LED_RUN_PIN, (i == 0) ? (i = Bit_SET) : (i = Bit_RESET));
 }
 
-uint16_t BspGpioGetButtonLevel(eBspButtonIdDef ebuttonId)
+/**
+ * @brief  读全部按键，返回按下按键的掩码。
+ * @return 掩码，bit 与 E_BSP_KEY_x 对应：1=该键按下，0=该键未按下；返回 0 表示没有按键按下。
+ * @note   本板按键低电平有效，极性转换在本函数内完成，调用方拿到的就是"1=按下"的逻辑值。
+ */
+uint16_t BspGpioGetButtonMask(void)
 {
-    switch (ebuttonId) {
-        case E_BSP_KEY_1:
-            return GPIO_ReadInputDataBit(KEY1_PORT, KEY1_PIN);
-        case E_BSP_KEY_2:
-            return GPIO_ReadInputDataBit(KEY2_PORT, KEY2_PIN);
-        case E_BSP_KEY_3:
-            return GPIO_ReadInputDataBit(KEY3_PORT, KEY3_PIN);
-        case E_BSP_KEY_MAX:
-            return (GPIO_ReadInputDataBit(KEY1_PORT, KEY1_PIN) | GPIO_ReadInputDataBit(KEY2_PORT, KEY2_PIN) | GPIO_ReadInputDataBit(KEY3_PORT, KEY3_PIN));
-        default:
-            return 1; // Default to high level (not pressed)
+    uint16_t mask = 0u;
+
+    if (GPIO_ReadInputDataBit(KEY1_PORT, KEY1_PIN) == 0u)
+    {
+        mask |= (uint16_t)E_BSP_KEY_1;
     }
+    if (GPIO_ReadInputDataBit(KEY2_PORT, KEY2_PIN) == 0u)
+    {
+        mask |= (uint16_t)E_BSP_KEY_2;
+    }
+    if (GPIO_ReadInputDataBit(KEY3_PORT, KEY3_PIN) == 0u)
+    {
+        mask |= (uint16_t)E_BSP_KEY_3;
+    }
+
+    return mask;
 }

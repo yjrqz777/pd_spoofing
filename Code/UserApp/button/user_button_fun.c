@@ -13,19 +13,25 @@
 
 #include <stdio.h>
 #include "user_button.h"
-
-void UsrButtonOutputOn(void)
+#include "UserApp/user_system.h"
+#include "Components/log/src/log.h"
+void UsrButtonPdInc(void)
 {
+    log_info("UsrButtonPdInc");
 }
 
-void UsrButtonOutputOff(void)
+void UsrButtonPdDec(void)
 {
+    log_info("UsrButtonPdDec");
 }
 
-void UsrButtonValueDec(void)
+void UsrButtonPdON(void)
 {
+    log_info("UsrButtonPdON");
+    tSysData.eState = E_SYSTEM_RUN;
 }
 
-void UsrButtonValueInc(void)
+void UsrButtonPdTest(void)
 {
+    log_info("UsrButtonPdTest");
 }

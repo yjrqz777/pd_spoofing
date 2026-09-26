@@ -94,7 +94,7 @@ eStatusDef BspAdcReadRaw(void)
     u16Raw[E_BSP_ADC_VBUS] = ADC1->IDATAR1;
     u16Raw[E_BSP_ADC_VOUT] = ADC1->IDATAR2;
     u16Raw[E_BSP_ADC_IBUS] = ADC1->IDATAR3;
-    log_info("%04d,%04d,%04d",u16Raw[E_BSP_ADC_VBUS],u16Raw[E_BSP_ADC_VOUT],u16Raw[E_BSP_ADC_IBUS]);
+    // log_info("%04d,%04d,%04d",u16Raw[E_BSP_ADC_VBUS],u16Raw[E_BSP_ADC_VOUT],u16Raw[E_BSP_ADC_IBUS]);
     return E_OK;
 }
 

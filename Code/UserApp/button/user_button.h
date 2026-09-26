@@ -16,11 +16,6 @@ extern "C" {
 
 #include "UserDev/button/dev_button.h"
 
-/* user_button_fun.c 提供的业务回调 */
-void UsrButtonOutputOn(void);
-void UsrButtonOutputOff(void);
-void UsrButtonValueDec(void);
-void UsrButtonValueInc(void);
 
 /* 注册内置默认条目（原静态表内容），可不调用 */
 void     UsrButtonRegisterDefault(void);
