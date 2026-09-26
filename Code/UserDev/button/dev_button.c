@@ -14,13 +14,11 @@
 #include "UserBsp/bsp_time.h"
 #include <string.h>
 
-/* 一行里可挂的事件回调数：按事件 id 直接索引，0 号（E_DEV_BTN_NONE）空着不用 */
-#define DEV_BTN_EVENT_SLOT ((uint8_t)E_DEV_BTN_COUNT)
 
 /* SPSC 队列：中断侧只写 tail，主循环侧只写 head */
 typedef struct
 {
-    tDevButtonEventDef events[DEV_BTN_QUEUE_SIZE];   /* 环形缓冲：按键掩码 + 事件 */
+    eDevButtonEventDef events[DEV_BTN_QUEUE_SIZE];   /* 环形缓冲：按键掩码 + 事件 */
     uint16_t           head;                        /* 头 消费者游标：主循环独占 */
     uint16_t           tail;                        /* 尾 生产者游标：中断独占 */
 } tDevButtonQueueDef;
@@ -40,9 +38,9 @@ typedef enum
 /* 一行 = 一个注册的按键：按键掩码 + 该按键的事件回调表 + 它自己的状态机计数 */
 typedef struct
 {
-    uint16_t buttonMask;                     /* 按键掩码（单键或组合的按位或） */
-    FuncPtr  eventFun[DEV_BTN_EVENT_SLOT];   /* 事件 id → 回调，NULL=该事件没订阅 */
-
+    uint16_t keyValue;                     /* 键值（单键或组合的按位或） */
+    eDevButtonEventDef event;        /* 事件 */
+    FuncPtr  func;   /* 事件 id → 回调，NULL=该事件没订阅 */
     uint16_t ticks;                          /* 扫描计数 */
     uint8_t  suppress;                       /* 本轮点按被组合吃掉：不发单击/双击结果 */
     uint8_t  state;                          /* 状态机状态 */
@@ -53,7 +51,7 @@ typedef struct
 } tDevButtonDef;
 
 /* 按键表：一个注册的按键一行，sButtonNum 即当前行数（也就是要扫描的按键个数） */
-static tDevButtonDef tButton[DEV_BTN_MASK_MAX];
+static tDevButtonDef tButton[DEV_BTN_NUM_MAX];
 static uint8_t       sButtonNum = 0u;
 
 
@@ -63,12 +61,12 @@ static uint8_t       sButtonNum = 0u;
 
 /**
  * @brief  中断侧：把（按键掩码, 事件 id）压入 SPSC 队列。
- * @param[in] buttonMask 按键掩码（单键或组合）。
+ * @param[in] keyValue 按键掩码（单键或组合）。
  * @param[in] event 事件。
  * @note   只有 TIM3 中断调用，是队列的唯一生产者。状态机产出什么事件就记录什么事件，
  *         有没有人订阅与入队无关；队列满时丢弃本次事件，不覆盖尚未被主循环取走的旧事件。
  */
-static void DevButtonQueueEvent(uint16_t buttonMask, eDevButtonEventDef event)
+static void DevButtonPushQueueEvent(uint16_t keyValue, eDevButtonEventDef event)
 {
     uint16_t next;
 
@@ -83,58 +81,46 @@ static void DevButtonQueueEvent(uint16_t buttonMask, eDevButtonEventDef event)
         return;                                     /* 队列满：丢弃本次事件 */
     }
 
-    sQueue.events[sQueue.tail].buttonMask = buttonMask;
-    sQueue.events[sQueue.tail].event      = event;
+    sQueue.events[sQueue.tail]      = event;
     sQueue.tail = next;
 }
 
 /**
  * @brief  读一个按键掩码的电平：掩码内所有按键同时为有效电平才算按下。
- * @param[in] buttonMask 按键掩码（单键或组合）。
+ * @param[in] keyValue 按键掩码（单键或组合）。
  * @return 1=未按下, 0=按下。
  * @note   掩码的每个 bit 就是一个物理按键（E_BSP_KEY_x = 1/2/4），逐位取引脚电平；
  *         组合按键按"全部按下"合成一个逻辑按键，少一个就整项未按下。
  */
-static uint8_t DevButtonReadLevel(uint16_t buttonMask)
+static uint16_t DevButtonReadKeyValue()
 {
-    uint8_t  index;
-    uint16_t buttonBit;
+    // uint8_t  index;
+    // uint16_t buttonBit;
 
-    for (index = 0u; index < (uint8_t)E_BSP_KEY_NUM; index++)
-    {
-        buttonBit = (uint16_t)(1u << index);
-        if ((buttonMask & buttonBit) == 0u)
-        {
-            continue;                                       /* 该按键不属于本项 */
-        }
-        if (BspGpioGetButtonLevel((eBspButtonIdDef)buttonBit) != DEV_BTN_ACTIVE_LEVEL)
-        {
-            return (uint8_t)(!DEV_BTN_ACTIVE_LEVEL);        /* 有一个没按下：整项未按下 */
-        }
-    }
-    return DEV_BTN_ACTIVE_LEVEL;
+    return BspGpioGetButtonLevel(E_BSP_KEY_MAX);
+
 }
 
 /**
  * @brief  组合压制判定：本按键按住期间，是否有覆盖它的组合按键同时成立。
- * @param[in] buttonMask 本按键的掩码。
+ * @param[in] keyValue 本按键的掩码。
  * @return 1=本按键结果被组合吃掉；0=没有被压制。
  * @note   只在已注册的按键里找组合项，所以没注册过的组合不会有压制作用；
  *         组合项的电平用本轮已消抖值（排在后面的行可能还是上一轮的值，差一个扫描周期）。
  */
-static uint8_t DevButtonIsComboSuppressed(uint16_t buttonMask)
+static uint8_t DevButtonIsComboSuppressed(uint16_t keyValue)
 {
     uint8_t  index;
     uint16_t combo;
 
     for (index = 0u; index < sButtonNum; index++)
     {
-        combo = tButton[index].buttonMask;
+        combo = tButton[index].keyValue;
         if ((combo & (combo - 1u)) == 0u)
         {
             continue;                                       /* 不是组合项 */
         }
-        if ((combo == buttonMask) || ((buttonMask & combo) != buttonMask))
+        if ((combo == keyValue) || ((keyValue & combo) != keyValue))
         {
             continue;                                       /* 自己 / 该组合项不覆盖本按键 */
         }
@@ -150,21 +136,21 @@ static uint8_t DevButtonIsComboSuppressed(uint16_t buttonMask)
 /**
  * @brief  单个注册按键的消抖与状态机推进。
  * @param[in,out] button 按键表里的一行（掩码 + 回调表 + 状态机计数）。
+ * @param[in] keyValue 读取到的按键电平。
  */
 static void DevButtonHandler(tDevButtonDef *button)
 {
-    uint16_t buttonMask = button->buttonMask;
-    uint8_t  readLevel  = DevButtonReadLevel(buttonMask);   /* 1=未按下, 0=按下 */
+    uint16_t keyValue = button->keyValue;
 
     if (button->state > (uint8_t)E_DEV_BTN_STATE_IDLE) { button->ticks++; }
     if (button->holdDiv > 0u)                          { button->holdDiv--; }
 
     /* 消抖：连续读到同一新电平达到 DEV_BTN_DEBOUNCE_NUM 次才认可 */
-    if (readLevel != button->level)
+    if (keyValue != button->level)
     {
         if (++button->debounce >= (uint8_t)DEV_BTN_DEBOUNCE_NUM)
         {
-            button->level = readLevel;
+            button->level = keyValue;
             button->debounce = 0u;
         }
     }
@@ -178,7 +164,7 @@ static void DevButtonHandler(tDevButtonDef *button)
     case E_DEV_BTN_STATE_IDLE:
         if (button->level == DEV_BTN_ACTIVE_LEVEL)
         {
-            DevButtonQueueEvent(buttonMask, E_DEV_BTN_DOWN);
+            DevButtonPushQueueEvent(keyValue, E_DEV_BTN_DOWN);
             button->ticks = 0u;
             button->repeat = 1u;
             button->suppress = 0u;                                  /* 新一次点按序列 */
@@ -189,13 +175,13 @@ static void DevButtonHandler(tDevButtonDef *button)
     case E_DEV_BTN_STATE_PRESS:
         if (button->level != DEV_BTN_ACTIVE_LEVEL)
         {
-            DevButtonQueueEvent(buttonMask, E_DEV_BTN_UP);
+            DevButtonPushQueueEvent(keyValue, E_DEV_BTN_UP);
             button->ticks = 0u;
             button->state = (uint8_t)E_DEV_BTN_STATE_RELEASE;
         }
         else if (button->ticks > (uint16_t)DEV_BTN_LONG_TICKS)
         {
-            DevButtonQueueEvent(buttonMask, E_DEV_BTN_LONG_PRESS);
+            DevButtonPushQueueEvent(keyValue, E_DEV_BTN_LONG_PRESS);
             button->holdDiv = 0u;
             button->state = (uint8_t)E_DEV_BTN_STATE_LONG_HOLD;
         }
@@ -204,9 +190,9 @@ static void DevButtonHandler(tDevButtonDef *button)
     case E_DEV_BTN_STATE_RELEASE:
         if (button->level == DEV_BTN_ACTIVE_LEVEL)                  /* 多击窗口内又按下 */
         {
-            DevButtonQueueEvent(buttonMask, E_DEV_BTN_DOWN);
+            DevButtonPushQueueEvent(keyValue, E_DEV_BTN_DOWN);
             if (button->repeat < (uint8_t)DEV_BTN_REPEAT_MAX) { button->repeat++; }
-            DevButtonQueueEvent(buttonMask, E_DEV_BTN_REPEAT);
+            DevButtonPushQueueEvent(keyValue, E_DEV_BTN_REPEAT);
             button->ticks = 0u;
             button->state = (uint8_t)E_DEV_BTN_STATE_REPEAT;
         }
@@ -216,8 +202,8 @@ static void DevButtonHandler(tDevButtonDef *button)
             {
                 button->suppress = 0u;                              /* 组合成立：本轮不出结果 */
             }
-            else if (button->repeat == 1u) { DevButtonQueueEvent(buttonMask, E_DEV_BTN_SINGLE_CLICK); }
-            else if (button->repeat == 2u) { DevButtonQueueEvent(buttonMask, E_DEV_BTN_DOUBLE_CLICK); }
+            else if (button->repeat == 1u) { DevButtonPushQueueEvent(keyValue, E_DEV_BTN_SINGLE_CLICK); }
+            else if (button->repeat == 2u) { DevButtonPushQueueEvent(keyValue, E_DEV_BTN_DOUBLE_CLICK); }
             button->state = (uint8_t)E_DEV_BTN_STATE_IDLE;
         }
         break;
@@ -225,7 +211,7 @@ static void DevButtonHandler(tDevButtonDef *button)
     case E_DEV_BTN_STATE_REPEAT:
         if (button->level != DEV_BTN_ACTIVE_LEVEL)
         {
-            DevButtonQueueEvent(buttonMask, E_DEV_BTN_UP);
+            DevButtonPushQueueEvent(keyValue, E_DEV_BTN_UP);
             if (button->ticks < (uint16_t)DEV_BTN_CLICK_WINDOW)
             {
                 button->ticks = 0u;
@@ -247,13 +233,13 @@ static void DevButtonHandler(tDevButtonDef *button)
         {
             if (button->holdDiv == 0u)                              /* 100ms 节流，避免事件洪水 */
             {
-                DevButtonQueueEvent(buttonMask, E_DEV_BTN_LONG_HOLD);
+                DevButtonPushQueueEvent(keyValue, E_DEV_BTN_LONG_HOLD);
                 button->holdDiv = (uint8_t)DEV_BTN_HOLD_DIV;
             }
         }
         else
         {
-            DevButtonQueueEvent(buttonMask, E_DEV_BTN_UP);
+            DevButtonPushQueueEvent(keyValue, E_DEV_BTN_UP);
             button->state = (uint8_t)E_DEV_BTN_STATE_IDLE;
         }
         break;
@@ -265,7 +251,7 @@ static void DevButtonHandler(tDevButtonDef *button)
 
     /* 组合压制：本按键按住期间若有覆盖它的组合项同时成立，本轮点按结果作废 */
     if ((button->level == DEV_BTN_ACTIVE_LEVEL) &&
-        (DevButtonIsComboSuppressed(buttonMask) != 0u))
+        (DevButtonIsComboSuppressed(keyValue) != 0u))
     {
         button->suppress = 1u;
     }
@@ -279,7 +265,8 @@ static void DevButtonHandler(tDevButtonDef *button)
 static void DevButtonTickHandler(void)
 {
     static uint8_t timeCount = 0u;
-    uint8_t index;
+    uint8_t index = 0;
+    uint16_t keyValue = 0u;
 
     if (++timeCount < (uint8_t)DEV_BTN_SCAN_MS)
     {
@@ -287,9 +274,17 @@ static void DevButtonTickHandler(void)
     }
     timeCount = 0u;
 
+
+    /*先提取键值，依据键值扫描，并不每次扫描全部注册按键*/
+    keyValue = DevButtonReadKeyValue();
+
+
     for (index = 0u; index < sButtonNum; index++)
     {
-        DevButtonHandler(&tButton[index]);        /* 只扫已注册的按键 */
+        if (tButton[index].keyValue == keyValue)/* 找到对应的按键  */
+        {
+            DevButtonHandler(&tButton[index]); /* 扫描 键值 */
+        }
     }
 }
 
@@ -299,7 +294,7 @@ static void DevButtonTickHandler(void)
 
 void DevButtonInit(void)
 {
-    memset(tButton, 0, sizeof(tButton));
+    // memset(tButton, 0, sizeof(tButton));
     sButtonNum = 0u;
     sQueue.head = 0u;
     sQueue.tail = 0u;
@@ -309,7 +304,7 @@ void DevButtonInit(void)
 
 /**
  * @brief  注册一条订阅：某按键（单键或组合）产生某事件时调用 fun。
- * @param[in] buttonMask 按键掩码：单键写一个 E_BSP_KEY_x，组合按键按位或。
+ * @param[in] keyValue 按键掩码：单键写一个 E_BSP_KEY_x，组合按键按位或。
  * @param[in] event 触发事件。
  * @param[in] fun 命中后的回调。
  * @return 1=注册成功；0=掩码非法 / 事件非法 / 回调为空 / 同键同事件重复 / 按键表已满。
@@ -317,12 +312,12 @@ void DevButtonInit(void)
  *         新按键会在表里占一行，已有按键直接用它那一行；登记即纳入扫描。
  *         组合按键的电平是掩码内所有按键同时按下，出事件时掩码就是这个组合掩码。
  */
-uint8_t DevButtonRegister(uint16_t buttonMask, eDevButtonEventDef event, FuncPtr fun)
+uint8_t DevButtonRegister(uint16_t Mask, eDevButtonEventDef event, FuncPtr fun)
 {
     uint8_t index;
 
-    if ((buttonMask == 0u) ||
-        ((buttonMask & (uint16_t)~((1u << (uint8_t)E_BSP_KEY_NUM) - 1u)) != 0u))
+    if ((Mask == 0u) ||
+        ((Mask & (uint16_t)~((1u << (uint8_t)E_BSP_KEY_MAX) - 1u)) != 0u))
     {
         return 0u;                                      /* 掩码非法 */
     }
@@ -331,34 +326,40 @@ uint8_t DevButtonRegister(uint16_t buttonMask, eDevButtonEventDef event, FuncPtr
         return 0u;                                      /* 事件非法或回调为空 */
     }
 
+    if (sButtonNum >= DEV_BTN_NUM_MAX)
+    {
+        #error "key table full, please increase DEV_BTN_NUM_MAX"
+        return 0u;                                      /* 按键表已满 */
+    }
+    
+
+
+    
     for (index = 0u; index < sButtonNum; index++)
     {
-        if (tButton[index].buttonMask == buttonMask)
+        if (tButton[index].keyValue != Mask)
         {
-            break;                                      /* 这个按键已经有行了 */
+            continue;                                   /* 不是这个按键 */
+        }
+        /* 键值相同 事件不同 记录在下一个空间*/
+        if (tButton[index].event != event)
+        {
+            sButtonNum++; 
+            break;
+        }
+        /* 键值相同 事件相同 覆盖空间*/
+        if (tButton[index].event == event)
+        {
+            sButtonNum = index; /* 覆盖空间*/
+            break; 
         }
     }
+    
 
-    if (index < sButtonNum)
-    {
-        if (tButton[index].eventFun[event] != NULL)
-        {
-            return 0u;                                  /* 同一按键同一事件重复 */
-        }
-    }
-    else
-    {
-        if (sButtonNum >= (uint8_t)DEV_BTN_MASK_MAX)
-        {
-            return 0u;                                  /* 按键表已满 */
-        }
-        memset(&tButton[sButtonNum], 0, sizeof(tButton[0]));
-        tButton[sButtonNum].buttonMask = buttonMask;
-        tButton[sButtonNum].level = (uint8_t)(!DEV_BTN_ACTIVE_LEVEL);   /* 初值取反，免得上电被判按下 */
-        sButtonNum++;
-    }
-
-    tButton[index].eventFun[event] = fun;             /* 这个按键出这个事件时调 fun */
+    tButton[sButtonNum].keyValue = Mask;
+    tButton[sButtonNum].event = event;
+    tButton[sButtonNum].func = fun;             /* 这个按键出这个事件时调 fun */
+    sButtonNum++;
     return 1u;
 }
 
@@ -369,25 +370,24 @@ uint8_t DevButtonRegister(uint16_t buttonMask, eDevButtonEventDef event, FuncPtr
  */
 void DevButtonProcessEvents(void)
 {
-    uint16_t           buttonMask;
+    uint16_t           keyValue;
     eDevButtonEventDef event;
     uint8_t            index;
 
     while (sQueue.head != sQueue.tail)
     {
-        buttonMask = sQueue.events[sQueue.head].buttonMask;
-        event      = sQueue.events[sQueue.head].event;
+        event      = sQueue.events[sQueue.head];
         sQueue.head = (uint16_t)((sQueue.head + 1u) % (uint16_t)DEV_BTN_QUEUE_SIZE);
 
         for (index = 0u; index < sButtonNum; index++)
         {
-            if (tButton[index].buttonMask != buttonMask)
+            if (tButton[index].keyValue != keyValue)
             {
                 continue;                               /* 不是这个按键 */
             }
-            if (tButton[index].eventFun[event] != NULL)
+            if (tButton[index].func != NULL)
             {
-                tButton[index].eventFun[event]();     /* 这个按键订阅了这个事件 */
+                tButton[index].func();     /* 这个按键订阅了这个事件 */
             }
             break;
         }

@@ -30,6 +30,24 @@ extern "C" {
 #define DEV_BTN_REPEAT_MAX    (2u)                          /* 连击计数上限 */
 #define DEV_BTN_HOLD_DIV      (100u / DEV_BTN_SCAN_MS)      /* 长按持续上报节流：100ms 一次 */
 #define DEV_BTN_ACTIVE_LEVEL   (0u)      /* 本板按键低电平有效 */
+#define DEV_BTN_NUM_MAX      (10) /* 可注册的按键数量上限 */
+
+/* 一行里可挂的事件回调数：按事件 id 直接索引，0 号（E_DEV_BTN_NONE）空着不用 */
+#define DEV_BTN_EVENT_SLOT ((uint8_t)E_DEV_BTN_COUNT)
+
+
+typedef enum eDevKeyVlaueDef
+{
+    E_DEV_KEY_NONE = 0,      /* 无按键 */
+    E_DEV_KEY_1 = 0x0001,         /* KEY1：PB3，低电平有效 */
+    E_DEV_KEY_2 = 0x0002,         /* KEY2：PB4，低电平有效 */
+    E_DEV_KEY_3 = 0x0004,         /* KEY3：PB6，低电平有效 */
+} eDevKeyVlaueDef;
+
+
+
+
+
 
 /* 按键事件（E_DEV_BTN_NONE 必须为 0） */
 typedef enum
@@ -48,19 +66,13 @@ typedef enum
 /* 事件队列条目：按键掩码 + 事件 id */
 typedef struct
 {
-    uint16_t           buttonMask;   /* 按键掩码（单键或组合的按位或） */
+    uint16_t           keyValue;   /* 按键掩码（单键或组合的按位或） */
     eDevButtonEventDef event;        /* 事件 */
 } tDevButtonEventDef;
 
-/* 只暴露接口；按键表与队列结构体保留在本模块的 .c 内。
- * 掩码每一位对应一个物理按键（E_BSP_KEY_x = 1/2/4），可按位或组成组合掩码；
- * 组合按键按"掩码内所有按键同时按下"判定，出事件时掩码就是这个组合掩码；
- * 组合按键按住期间，被它覆盖的成员按键本轮不出单击/双击结果（组合优先）。
- * 掩码类型为 uint16_t：最多支持 16 个按键位（bit0 到 bit15）。
- * DevButtonRegister() 登记（按键掩码, 事件）→ 回调：同一个按键只占一行、登记即纳入扫描，
- * 同一（按键掩码, 事件）重复注册会被拒绝。 */
+
 void               DevButtonInit(void);
-uint8_t            DevButtonRegister(uint16_t buttonMask, eDevButtonEventDef event, FuncPtr fun);
+uint8_t            DevButtonRegister(uint16_t keyValue, eDevButtonEventDef event, FuncPtr fun);
 void               DevButtonProcessEvents(void);
 
 #ifdef __cplusplus
