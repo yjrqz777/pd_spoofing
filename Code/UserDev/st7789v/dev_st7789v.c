@@ -2,23 +2,48 @@
 
 #include "dev_st7789v.h"
 
-#if (ST7789V_USE_DMA != 0)
+/** @brief 一帧中的一个绘制项（模块内部，不对外暴露） */
+#define ST7789V_DRAW_ITEM_NUM  (16u)
+#define ST7789V_TEXT_LEN       (12u)
 
-/** @brief 一次矩形刷新的上下文（模块内部，不对外暴露） */
 typedef struct
 {
-    uint16_t u16X;       /* 矩形左上角 x */
-    uint16_t u16Y;       /* 矩形左上角 y */
-    uint16_t u16W;       /* 矩形宽度（像素） */
-    uint16_t u16Color;   /* 填充色（原始 RGB565） */
-    uint16_t u16Row;     /* 已发出的行数，从 0 起 */
-    uint16_t u16Left;    /* 剩余行数，0 = 空闲（兼作忙标志） */
-} tSt7789vFillDef;
+    uint16_t        u16X;      /* 矩形位置与大小 */
+    uint16_t        u16Y;
+    uint16_t        u16W;
+    uint16_t        u16Color;  /* pfnRow 为 0 时用：整块同一个颜色 */
+    DevSt7789vRowFn pfnRow;    /* 0 = 纯色；非 0 = 每行内容由回调给 */
+    const tFont    *ptFont;    /* pfnRow 为 TextRowFn 时用：文本来源 */
+    const char     *pcText;
+    char            acText[ST7789V_TEXT_LEN]; /* 异步发送期间使用的文本副本 */
+    uint16_t        u16Fg;
+    uint16_t        u16Bg;
+    int16_t         i16PenX;
+    int16_t         i16BaseY;
+    int16_t         i16X0;
+    int16_t         i16Y0;
+    uint16_t        u16Row;    /* 已发出的行数，从 0 起 */
+    uint16_t        u16Left;   /* 剩余行数，0 = 这一项发完了 */
+} tSt7789vJobDef;
 
-static uint16_t aLine[ST7789V_WIDTH];  /* 480 字节行缓冲，屏幕专属，不对外暴露 */
-static tSt7789vFillDef tFill;           /* 当前矩形，全 0 表示空闲 */
+static uint16_t aLine[ST7789V_WIDTH];   /* 480 字节行缓冲，屏幕专属，不对外暴露 */
 
-#endif /* ST7789V_USE_DMA */
+#if (ST7789V_USE_DMA != 0)
+static tSt7789vJobDef tDrawItems[ST7789V_DRAW_ITEM_NUM];
+static uint8_t u8DrawCount = 0u;        /* Show 前已经写入的绘制项数量 */
+static uint8_t u8SendIndex = 0u;        /* Show 后当前发送项 */
+static uint8_t u8Showing = 0u;          /* 1 = 当前帧正在异步发送 */
+#endif
+
+/* TextRowFn 读的那组量：每行开始前，从当前这块 job 搬过来 */
+static const tFont *ptTextFont = 0;
+static const char  *pcTextStr = 0;
+static uint16_t     u16TextFg = 0u;
+static uint16_t     u16TextBg = 0u;
+static int16_t      i16TextPenX = 0;
+static int16_t      i16TextBaseY = 0;
+static int16_t      i16TextX0 = 0;   /* 文本墨迹包围盒左上角 */
+static int16_t      i16TextY0 = 0;
 
 static void St7789vSendCmd(uint8_t cmd)
 {
@@ -328,7 +353,8 @@ void DevSt7789vInit(void)
     St7789vSendCmd(0x29);
     Delay_Ms(20);
 
-	DevSt7789vFillScreenStart(ST7789V_LIGHTBLUE);
+	(void)DevSt7789vFillScreenStart(ST7789V_MAGENTA);
+    (void)DevSt7789vShow();
     // DevSt7789vFillRect(ST7789V_RED);
 	// DevSt7789vDrawPoint(5, 5, ST7789V_BLUE);
 	// DevSt7789vDrawCircle((ST7789V_WIDTH/2), (ST7789V_HEIGHT/2), (ST7789V_HEIGHT/2), ST7789V_GREEN);
@@ -337,29 +363,79 @@ void DevSt7789vInit(void)
 
 
 /**
- * @brief  启动一次矩形填充（异步）
+ * @brief  矩形参数检查：非空且完全落在屏内
+ * @retval 0 合法；1 拒绝
+ */
+static uint8_t RectCheck(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+{
+    if ((w == 0u) || (h == 0u))
+    {
+        return 1u;
+    }
+
+    if (((uint32_t)x + w) > ST7789V_WIDTH)
+    {
+        return 1u;
+    }
+
+    if (((uint32_t)y + h) > ST7789V_HEIGHT)
+    {
+        return 1u;
+    }
+
+    return 0u;
+}
+
+#if (ST7789V_USE_DMA != 0)
+/**
+ * @brief  在当前帧的绘制列表中申请一个绘制项
+ * @retval 0 参数无效、正在发送或列表已满；非 0 是可填写的绘制项
+ */
+static tSt7789vJobDef *DrawItemAlloc(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+{
+    tSt7789vJobDef *pJob;
+
+    if ((RectCheck(x, y, w, h) != 0u) ||
+        (u8Showing != 0u) ||
+        (u8DrawCount >= ST7789V_DRAW_ITEM_NUM))
+    {
+        return 0;
+    }
+
+    pJob = &tDrawItems[u8DrawCount];
+    pJob->u16X     = x;
+    pJob->u16Y     = y;
+    pJob->u16W     = w;
+    pJob->u16Row   = 0u;
+    pJob->u16Left  = h;
+    pJob->u16Color = 0u;
+    pJob->pfnRow   = 0;
+    pJob->ptFont   = 0;
+    pJob->pcText   = 0;
+    pJob->acText[0] = '\0';
+    return pJob;
+}
+
+/** @brief 完成当前绘制项，并将它计入本帧 */
+static void DrawItemCommit(void)
+{
+    u8DrawCount++;
+}
+#endif /* ST7789V_USE_DMA */
+
+/**
+ * @brief  把一块纯色矩形写入当前帧绘制列表
  * @param[in] x,y       矩形左上角坐标
  * @param[in] w,h       矩形宽高（像素）
  * @param[in] u16Color  填充色（原始 RGB565）
- * @retval 0 已受理，由 DevSt7789vService 逐行推出
- * @retval 1 参数越界，或上一块还没发完
+ * @retval 0 已写入；1 参数越界、正在发送或绘制列表已满
  */
 uint8_t DevSt7789vFillRectStart(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t u16Color)
 {
-	if ((w == 0u) || (h == 0u))
-	{
-		return 1u;
-	}
-
-	if (((uint32_t)x + w) > ST7789V_WIDTH)
-	{
-		return 1u;
-	}
-	
-	if (((uint32_t)y + h) > ST7789V_HEIGHT)
-	{
-		return 1u;
-	}
+    if (RectCheck(x, y, w, h) != 0u)
+    {
+        return 1u;
+    }
 
 #if (ST7789V_USE_DMA == 0)
     /* 阻塞方式：设好窗口后逐像素发，发完才返回 */
@@ -377,28 +453,262 @@ uint8_t DevSt7789vFillRectStart(uint16_t x, uint16_t y, uint16_t w, uint16_t h, 
     }
     return 0u;
 #else
+    {
+        tSt7789vJobDef *pJob = DrawItemAlloc(x, y, w, h);
 
-	if (tFill.u16Left != 0u) /* 上一块还没发完 */
-	{
-		return 1u;
-	}
+        if (pJob == 0)
+        {
+            return 1u;
+        }
 
-	if (BspSpiDmaIsIdle() == 0u)
-	{
-		return 1u;
-	}
-
-	St7789vSetAddress(x, y, (uint16_t)(x + w - 1u), (uint16_t)(y + h - 1u));   /* 窗口 + 0x2c */
-    BspSpiDc(ST7789V_DC_DATA);                                                 /* 后面全是像素数据 */
-
-    tFill.u16X     = x;
-    tFill.u16Y     = y;
-    tFill.u16W     = w;
-    tFill.u16Color = u16Color;
-    tFill.u16Row   = 0u;
-    tFill.u16Left  = h;          /* 最后写：这一句才把矩形交出去 */
+        pJob->u16Color = u16Color;
+        pJob->pfnRow   = 0;
+        DrawItemCommit();          /* 填完后计入本帧 */
+    }
     return 0u;
-#endif /* ST7789V_USE_DMA */
+#endif
+}
+
+/**
+ * @brief  把一块带内容的矩形写入当前帧绘制列表，每行内容由回调给
+ * @param[in] x,y,w,h  矩形位置与大小
+ * @param[in] pfnRow   行内容回调，填 u16W 个原始 RGB565 像素
+ * @retval 0 已写入；1 参数无效、正在发送或绘制列表已满
+ */
+uint8_t DevSt7789vBlitRectStart(uint16_t x, uint16_t y, uint16_t w, uint16_t h, DevSt7789vRowFn pfnRow)
+{
+    if (pfnRow == 0)
+    {
+        return 1u;
+    }
+
+    if (RectCheck(x, y, w, h) != 0u)
+    {
+        return 1u;
+    }
+
+#if (ST7789V_USE_DMA == 0)
+    /* 阻塞方式：设窗口、逐行取内容、逐像素发 */
+    {
+        uint16_t u16Row;
+        uint16_t i;
+
+        St7789vSetAddress(x, y, (uint16_t)(x + w - 1u), (uint16_t)(y + h - 1u));
+        BspSpiDc(ST7789V_DC_DATA);
+
+        for (u16Row = 0u; u16Row < h; u16Row++)
+        {
+            pfnRow(u16Row, w, aLine);
+            for (i = 0u; i < w; i++)
+            {
+                St7789vSendData2Bytes(aLine[i]);
+            }
+        }
+    }
+    return 0u;
+#else
+    {
+        tSt7789vJobDef *pJob = DrawItemAlloc(x, y, w, h);
+
+        if (pJob == 0)
+        {
+            return 1u;
+        }
+
+        pJob->pfnRow = pfnRow;
+        DrawItemCommit();          /* 填完后计入本帧 */
+    }
+    return 0u;
+#endif
+}
+
+/**
+ * @brief  文本绘制的行内容回调：把落在第 u16Row 行的所有字形片段合成进 pu16Line
+ * @note   先整行铺背景，再把每个字形的对应行盖上去；不在字库里的字符跳过。
+ */
+static void TextRowFn(uint16_t u16Row, uint16_t u16W, uint16_t *pu16Line)
+{
+    const tFontGlyph *ptGlyph;
+    const char *pc;
+    int16_t i16PenX;
+    int16_t i16AbsY;
+    int16_t i16GlyphY;
+    int16_t i16Col;
+    uint16_t i;
+
+    for (i = 0u; i < u16W; i++)                /* 1) 整行先铺背景 */
+    {
+        pu16Line[i] = u16TextBg;
+    }
+
+    i16AbsY = (int16_t)(i16TextY0 + (int16_t)u16Row);
+    i16PenX = i16TextPenX;
+
+    for (pc = pcTextStr; *pc != '\0'; pc++)    /* 2) 逐字符，看谁的墨迹落在这一行 */
+    {
+        ptGlyph = FontFindGlyph(ptTextFont, (uint8_t)*pc);
+        if (ptGlyph == 0)
+        {
+            continue;
+        }
+
+        if ((ptGlyph->width != 0u) && (ptGlyph->height != 0u))
+        {
+            i16GlyphY = (int16_t)(i16TextBaseY + ptGlyph->y_offset);
+            if ((i16AbsY >= i16GlyphY) && (i16AbsY < (int16_t)(i16GlyphY + (int16_t)ptGlyph->height)))
+            {
+                /* 目标列一定落在矩形内：包围盒是按同一批字形算出来的 */
+                i16Col = (int16_t)((i16PenX + ptGlyph->x_offset) - i16TextX0);
+                (void)FontRenderRow(ptTextFont, ptGlyph, (uint16_t)(i16AbsY - i16GlyphY),
+                                    u16TextFg, u16TextBg,
+                                    &pu16Line[i16Col], (uint16_t)(u16W - (uint16_t)i16Col));
+            }
+        }
+
+        i16PenX = (int16_t)(i16PenX + ptGlyph->advance);
+    }
+}
+
+/**
+ * @brief  把一段文本写入当前帧绘制列表
+ * @param[in] i16X          笔位置横坐标
+ * @param[in] i16BaselineY  基线纵坐标（不是顶边）
+ * @param[in] ptFont        字库
+ * @param[in] u16Fg         前景色（原始 RGB565）
+ * @param[in] u16Bg         背景色（原始 RGB565），不透明绘制
+ * @param[in] pcText        以 '\0' 结尾的字符串；不在字库中的字符跳过
+ * @retval 0 已写入；1 无墨迹、越界、文本过长、正在发送或列表已满
+ * @note   DMA 模式会复制文本，调用方可在返回后立即复用原字符串。
+ *         写完本帧所有内容后调用 DevSt7789vShow() 开始异步发送。
+ */
+uint8_t DevSt7789vDrawText(int16_t i16X, int16_t i16BaselineY, const tFont *ptFont,
+                           uint16_t u16Fg, uint16_t u16Bg, const char *pcText)
+{
+    const tFontGlyph *ptGlyph;
+    const char *pc;
+    int16_t i16PenX;
+    int16_t i16L;
+    int16_t i16T;
+    int16_t i16R;
+    int16_t i16B;
+    int16_t i16MinX = 0;
+    int16_t i16MaxX = 0;
+    int16_t i16MinY = 0;
+    int16_t i16MaxY = 0;
+    uint8_t u8Any = 0u;
+#if (ST7789V_USE_DMA != 0)
+    uint8_t u8TextIndex;
+#endif
+
+    if ((ptFont == 0) || (pcText == 0))
+    {
+        return 1u;
+    }
+
+#if (ST7789V_USE_DMA != 0)
+    for (pc = pcText, u8TextIndex = 0u; *pc != '\0'; pc++, u8TextIndex++)
+    {
+        if (u8TextIndex >= (ST7789V_TEXT_LEN - 1u))
+        {
+            return 1u;                         /* 文本副本缓冲不足，不截断显示 */
+        }
+    }
+#endif
+
+    /* 1) 先走一遍，算出所有字形墨迹的包围盒 */
+    i16PenX = i16X;
+    for (pc = pcText; *pc != '\0'; pc++)
+    {
+        ptGlyph = FontFindGlyph(ptFont, (uint8_t)*pc);
+        if (ptGlyph == 0)
+        {
+            continue;
+        }
+
+        if ((ptGlyph->width != 0u) && (ptGlyph->height != 0u))
+        {
+            i16L = (int16_t)(i16PenX + ptGlyph->x_offset);
+            i16T = (int16_t)(i16BaselineY + ptGlyph->y_offset);
+            i16R = (int16_t)(i16L + (int16_t)ptGlyph->width);
+            i16B = (int16_t)(i16T + (int16_t)ptGlyph->height);
+
+            if (u8Any == 0u)
+            {
+                i16MinX = i16L;
+                i16MaxX = i16R;
+                i16MinY = i16T;
+                i16MaxY = i16B;
+                u8Any = 1u;
+            }
+            else
+            {
+                if (i16L < i16MinX) { i16MinX = i16L; }
+                if (i16R > i16MaxX) { i16MaxX = i16R; }
+                if (i16T < i16MinY) { i16MinY = i16T; }
+                if (i16B > i16MaxY) { i16MaxY = i16B; }
+            }
+        }
+
+        i16PenX = (int16_t)(i16PenX + ptGlyph->advance);
+    }
+
+    if (u8Any == 0u)      /* 整条串都没有墨迹，没什么可画 */
+    {
+        return 1u;
+    }
+    if ((i16MinX < 0) || (i16MinY < 0))   /* 不裁剪：越界就拒绝 */
+    {
+        return 1u;
+    }
+
+    /* 2) 把这条文本的参数连同矩形一起入队；TextRowFn 每行开始时再取出来用 */
+#if (ST7789V_USE_DMA != 0)
+    {
+        tSt7789vJobDef *pJob = DrawItemAlloc((uint16_t)i16MinX, (uint16_t)i16MinY,
+                                        (uint16_t)(i16MaxX - i16MinX),
+                                        (uint16_t)(i16MaxY - i16MinY));
+
+        if (pJob == 0)
+        {
+            return 1u;
+        }
+
+        for (u8TextIndex = 0u; u8TextIndex < (ST7789V_TEXT_LEN - 1u); u8TextIndex++)
+        {
+            pJob->acText[u8TextIndex] = pcText[u8TextIndex];
+            if (pcText[u8TextIndex] == '\0')
+            {
+                break;
+            }
+        }
+        pJob->acText[ST7789V_TEXT_LEN - 1u] = '\0';
+
+        pJob->pfnRow   = TextRowFn;
+        pJob->ptFont   = ptFont;
+        pJob->pcText   = pJob->acText;
+        pJob->u16Fg    = u16Fg;
+        pJob->u16Bg    = u16Bg;
+        pJob->i16PenX  = i16X;
+        pJob->i16BaseY = i16BaselineY;
+        pJob->i16X0    = i16MinX;
+        pJob->i16Y0    = i16MinY;
+        DrawItemCommit();          /* 填完后计入本帧 */
+    }
+    return 0u;
+#else
+    ptTextFont   = ptFont;
+    pcTextStr    = pcText;
+    u16TextFg    = u16Fg;
+    u16TextBg    = u16Bg;
+    i16TextPenX  = i16X;
+    i16TextBaseY = i16BaselineY;
+    i16TextX0    = i16MinX;
+    i16TextY0    = i16MinY;
+
+    return DevSt7789vBlitRectStart((uint16_t)i16MinX, (uint16_t)i16MinY,
+                                   (uint16_t)(i16MaxX - i16MinX),
+                                   (uint16_t)(i16MaxY - i16MinY), TextRowFn);
+#endif
 }
 
 /**
@@ -409,33 +719,94 @@ uint8_t DevSt7789vFillScreenStart(uint16_t u16Color)
     return DevSt7789vFillRectStart(0u, 0u, ST7789V_WIDTH, ST7789V_HEIGHT, u16Color);
 }
 
+/**
+ * @brief  提交当前绘制列表并启动异步发送
+ * @retval 0 已启动；1 正在发送或当前列表为空
+ */
+uint8_t DevSt7789vShow(void)
+{
+#if (ST7789V_USE_DMA == 0)
+    return 0u;
+#else
+    if ((u8Showing != 0u) || (u8DrawCount == 0u))
+    {
+        return 1u;
+    }
+
+    u8SendIndex = 0u;
+    u8Showing = 1u;
+    return 0u;
+#endif
+}
+
 void DevSt7789vService(void)
 {
 #if (ST7789V_USE_DMA == 0)
     /* 阻塞方式下没有待推进的矩形 */
 #else
+    tSt7789vJobDef *pJob;
     uint16_t i;
 
-    BspSpiDmaService();                        /* 先让 BSP 收尾上一行 */
+    BspSpiDmaService();                          /* 先让 BSP 收尾上一行 */
 
-	if (tFill.u16Left == 0u)/* 没有待发的矩形 */
-	{
-		return;
-	} 
-	if (BspSpiDmaIsIdle() == 0u) /* 上一行还在搬 */
-	{
-		return;
-	}
+    if (u8Showing == 0u)        { return; }       /* Show 尚未提交 */
+    if (BspSpiDmaIsIdle() == 0u) { return; }      /* 上一行还在搬 */
 
-	for (i = 0u; i < tFill.u16W; i++)          /* 每行只填矩形宽度那一段 */
+    if (u8SendIndex >= u8DrawCount)              /* 整帧发送完成 */
     {
-        aLine[i] = U16_SWAP_BYTES(tFill.u16Color);
+        u8Showing = 0u;
+        u8SendIndex = 0u;
+        u8DrawCount = 0u;
+        return;
     }
 
-    if (BspSpiSendDmaStart((const uint8_t *)aLine, (uint16_t)(tFill.u16W * 2u)) == 0u)
+    pJob = &tDrawItems[u8SendIndex];
+
+    if (pJob->u16Left == 0u)                     /* 当前绘制项发送完成 */
     {
-        tFill.u16Row++;
-        tFill.u16Left--;                       /* 启动成功才算发出去一行 */
+        u8SendIndex++;
+        return;                                  /* 下一趟处理下一项 */
+    }
+
+    if (pJob->u16Row == 0u)                      /* 这一块的第一行：先把窗口设好 */
+    {
+        St7789vSetAddress(pJob->u16X, pJob->u16Y,
+                          (uint16_t)(pJob->u16X + pJob->u16W - 1u),
+                          (uint16_t)(pJob->u16Y + pJob->u16Left - 1u));
+        BspSpiDc(ST7789V_DC_DATA);
+    }
+
+    if (pJob->pfnRow != 0)                       /* 内容由回调给 */
+    {
+        /* 这一行的文本参数：从当前这块搬到 TextRowFn 读的那组量 */
+        ptTextFont   = pJob->ptFont;
+        pcTextStr    = pJob->pcText;
+        u16TextFg    = pJob->u16Fg;
+        u16TextBg    = pJob->u16Bg;
+        i16TextPenX  = pJob->i16PenX;
+        i16TextBaseY = pJob->i16BaseY;
+        i16TextX0    = pJob->i16X0;
+        i16TextY0    = pJob->i16Y0;
+
+        pJob->pfnRow(pJob->u16Row, pJob->u16W, aLine);
+
+        for (i = 0u; i < pJob->u16W; i++)
+        {
+            aLine[i] = U16_SWAP_BYTES(aLine[i]);   /* 就地转成屏要的字节序 */
+        }
+    }
+    else                                         /* 纯色：直接填 */
+    {
+        for (i = 0u; i < pJob->u16W; i++)
+        {
+            aLine[i] = U16_SWAP_BYTES(pJob->u16Color);
+        }
+    }
+
+    if (BspSpiSendDmaStart((const uint8_t *)aLine, (uint16_t)(pJob->u16W * 2u)) == 0u)
+    {
+        pJob->u16Row++;
+        pJob->u16Left--;                         /* 启动成功才算发出去一行 */
     }
 #endif /* ST7789V_USE_DMA */
 }

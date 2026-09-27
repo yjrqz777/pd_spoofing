@@ -5,7 +5,7 @@
 #include "UserDev/st7789v/dev_st7789v.h"
 
 #include "UserApp/user_system.h"
-
+#include "Components/font/font_inter_24.h"
 
 
 typedef struct sDisModeTableDef
@@ -20,13 +20,15 @@ static void DisplayOff(void);
 static void DisplayRun(void);
 static uint8_t u8Red, u8Green, u8Blue;
 
-
 sDisModeTableDef sDisModeTable[E_SYSTEM_MAX] =
 {
     {E_SYSTEM_POWERON, DisplayPowerOn},
     {E_SYSTEM_OFF,     DisplayOff},
     {E_SYSTEM_RUN,     DisplayRun},
 };
+
+
+
 
 /* 把那段逐灯点亮的逻辑抽成一个函数，DisplayPowerOn 只负责调用 */
 static void DisplayLightUpOneByOne(void)
@@ -64,7 +66,7 @@ void DisplayFlow(void)
 
     ColorHsvToRgb(DISPLAY_HUE_GREEN, 255, 20, &u8Red, &u8Green, &u8Blue);
 
-    if (++timeCount >= 60 / DISPLAY_TASK_MS)
+    if (++timeCount >= 90 / DISPLAY_TASK_MS)
     {
         timeCount = 0;
         if (u8LatchNum < 4)
@@ -96,44 +98,21 @@ void DisplayPowerOn(void)
 
 static void DisplayOff(void)
 {
-    ColorHsvToRgb(DISPLAY_HUE_RED, 255, 20, &u8Red, &u8Green, &u8Blue);
-    DevWs2812Fill(u8Red,u8Green,u8Blue);
+    static char string[6];
+    static uint16_t i=0;
+    ColorHsvToRgb(DISPLAY_HUE_MAGENTA, 255, 20, &u8Red, &u8Green, &u8Blue);
+    DevWs2812Fill(u8Red, u8Green, u8Blue);
+    sprintf(string,"%04d",i++);
+    /* 先写入本帧绘制列表，最后由 Show 一次提交并异步发送 */
+    (void)DevSt7789vDrawText(0, 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
+    (void)DevSt7789vDrawText(0, 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
+    (void)DevSt7789vDrawText(0, 17 + 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
+    (void)DevSt7789vDrawText(0, 17 + 17 + 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
+    (void)DevSt7789vShow();
 }
 
-/* ---------------- 运动方块演示 ----------------
- * 10×10 的方块每步挪一格。因为一步只走 1px，新旧位置有 9px 重叠，
- * 所以不重画整块，只动两条边：擦掉"离开的那一列"，画出"进入的那一列"。
- * 设备层一次只接一个矩形，两条边分两拍提交；中间那 9 列一直不动，交替期间看不出闪。 */
-#define DEMO_BLOCK_W    (20u)
-#define DEMO_BLOCK_H    (20u)
-#define DEMO_BLOCK_FG   (ST7789V_RED)
-#define DEMO_BLOCK_BG   (ST7789V_GRAY)   /* 必须与 DevSt7789vInit 末尾的整屏底色一致 */
 
-static uint16_t sDemoX = 0u;             /* 方块当前左上角 */
-static uint16_t sDemoY = 0u;
-static uint16_t sDemoNextX = 0u;         /* 下一步落点 */
-static uint16_t sDemoNextY = 0u;
-static uint8_t  sDemoJump = 0u;          /* 1 = 下一步换行，整块搬 */
-static uint8_t  sDemoPhase = 0u;         /* 0 = 待擦边，1 = 待画边 */
-static uint8_t  sDemoDrawn = 0u;         /* 0 = 方块还没画出来 */
 
-/* 规划下一步：右边还放得下就往右挪一格，否则换到下一行；到底回到第一行 */
-static void DemoPlanNext(void)
-{
-    if ((uint16_t)(sDemoX + DEMO_BLOCK_W) < ST7789V_WIDTH)
-    {
-        sDemoNextX = (uint16_t)(sDemoX + 1u);
-        sDemoNextY = sDemoY;
-        sDemoJump  = 0u;
-    }
-    else
-    {
-        sDemoNextX = 0u;
-        sDemoNextY = ((uint16_t)(sDemoY + (DEMO_BLOCK_H * 2u)) <= ST7789V_HEIGHT)
-                     ? (uint16_t)(sDemoY + DEMO_BLOCK_H) : 0u;
-        sDemoJump  = 1u;
-    }
-}
 
 void DisplayRun(void)
 {
@@ -142,58 +121,10 @@ void DisplayRun(void)
     uint8_t u8Ok;
     ColorHsvToRgb(u16colcor, 255, 20, &u8Red, &u8Green, &u8Blue);
     DevWs2812SetPixel(0, u8Red, u8Green, u8Blue);
-
-
     u16colcor   = (uint8_t)(rand() % COLOR_HUE_MAX);
 
 
-    if (sDemoDrawn == 0u)                       /* 第一步：先把方块整个画出来 */
-    {
-        if (DevSt7789vFillRectStart(sDemoX, sDemoY, DEMO_BLOCK_W, DEMO_BLOCK_H, DEMO_BLOCK_FG) == 0u)
-        {
-            sDemoDrawn = 1u;
-            DemoPlanNext();
-        }
-        return;
-    }
 
-    /* 每拍只提交一个矩形；返回 1（设备层还忙或越界）就下一拍重试 */
-    if (sDemoPhase == 0u)                       /* 擦掉离开的部分 */
-    {
-        if (sDemoJump != 0u)
-        {
-            u8Ok = (DevSt7789vFillRectStart(sDemoX, sDemoY, DEMO_BLOCK_W, DEMO_BLOCK_H, DEMO_BLOCK_BG) == 0u);
-        }
-        else
-        {
-            u8Ok = (DevSt7789vFillRectStart(sDemoX, sDemoY, 1u, DEMO_BLOCK_H, DEMO_BLOCK_BG) == 0u);
-        }
-
-        if (u8Ok != 0u)
-        {
-            sDemoPhase = 1u;
-        }
-    }
-    else                                        /* 画出进入的部分 */
-    {
-        if (sDemoJump != 0u)
-        {
-            u8Ok = (DevSt7789vFillRectStart(sDemoNextX, sDemoNextY, DEMO_BLOCK_W, DEMO_BLOCK_H, DEMO_BLOCK_FG) == 0u);
-        }
-        else
-        {
-            u8Ok = (DevSt7789vFillRectStart((uint16_t)(sDemoNextX + DEMO_BLOCK_W - 1u), sDemoNextY,
-                                            1u, DEMO_BLOCK_H, DEMO_BLOCK_FG) == 0u);
-        }
-
-        if (u8Ok != 0u)
-        {
-            sDemoX = sDemoNextX;
-            sDemoY = sDemoNextY;
-            sDemoPhase = 0u;
-            DemoPlanNext();
-        }
-    }
 }
 
 
