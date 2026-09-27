@@ -5,7 +5,7 @@
 #include "UserDev/st7789v/dev_st7789v.h"
 
 #include "UserApp/user_system.h"
-#include "Components/font/font_inter_24.h"
+#include "Components/font/font_inter_32.h"
 
 
 typedef struct sDisModeTableDef
@@ -99,15 +99,15 @@ void DisplayPowerOn(void)
 static void DisplayOff(void)
 {
     static char string[6];
-    static uint16_t i=0;
+    static float i=0.0;
     ColorHsvToRgb(DISPLAY_HUE_MAGENTA, 255, 20, &u8Red, &u8Green, &u8Blue);
     DevWs2812Fill(u8Red, u8Green, u8Blue);
-    sprintf(string,"%04d",i++);
+    sprintf(string,"%0.1f",i+=0.1);
     /* 先写入本帧绘制列表，最后由 Show 一次提交并异步发送 */
-    (void)DevSt7789vDrawText(0, 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
-    (void)DevSt7789vDrawText(0, 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
-    (void)DevSt7789vDrawText(0, 17 + 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
-    (void)DevSt7789vDrawText(0, 17 + 17 + 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
+    (void)DevSt7789vDrawText(0, 24, &gtFontInter32, ST7789V_WHITE, ST7789V_MAGENTA, string);
+    // (void)DevSt7789vDrawText(0, 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
+    // (void)DevSt7789vDrawText(0, 17 + 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
+    // (void)DevSt7789vDrawText(0, 17 + 17 + 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
     (void)DevSt7789vShow();
 }
 

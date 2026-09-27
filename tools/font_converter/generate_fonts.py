@@ -55,6 +55,7 @@ LABEL_CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-/"
 
 #: (字库名, 像素高度, 字符子集)
 FONT_SET = (
+    ("font_inter_32", 32, DIGIT_CHARS),
     ("font_inter_24", 24, DIGIT_CHARS),
     ("font_inter_16", 16, DIGIT_AND_SWITCH_CHARS),
     ("font_inter_8", 8, LABEL_CHARS),

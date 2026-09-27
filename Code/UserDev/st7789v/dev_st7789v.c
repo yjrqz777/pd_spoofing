@@ -652,6 +652,20 @@ uint8_t DevSt7789vDrawText(int16_t i16X, int16_t i16BaselineY, const tFont *ptFo
         i16PenX = (int16_t)(i16PenX + ptGlyph->advance);
     }
 
+    /* 把文本逻辑起点和前进终点纳入刷新区域，清除窄字形两侧的旧像素。
+       例如首字符 '1' 的 x_offset 为 3，仅刷新墨迹会留下前一帧的竖线。 */
+    if (u8Any != 0u)
+    {
+        if (i16X < i16MinX)
+        {
+            i16MinX = i16X;
+        }
+        if (i16PenX > i16MaxX)
+        {
+            i16MaxX = i16PenX;
+        }
+    }
+
     if (u8Any == 0u)      /* 整条串都没有墨迹，没什么可画 */
     {
         return 1u;
