@@ -100,6 +100,7 @@ int main(void)
         PT_TASK_REG(2, BspSensorTask);
         PT_TASK_REG(3, UserDisplayTask);
         PT_TASK_REG(4, UsrButtonTask);
+        PT_TASK_REG(5, DevSt7789vTask);
         
     }
 }

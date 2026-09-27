@@ -74,6 +74,14 @@
 #define U16_HI(x)   ((unsigned char)(((unsigned int)(x) >> 8) & 0xFF))
 #define U16_LO(x)   ((unsigned char)(((unsigned int)(x)      ) & 0xFF))
 
+/**
+ * @brief  高低字节对调（小端内存 -> 大端字节流）
+ * @note   16 位值在小端内存里是低字节在前，按字节顺序搬出去（DMA、缓冲发送）
+ *         会变成低字节先出线。对调后存进内存，搬出去就是高字节在前，
+ *         符合 ST7789V 等要求大端像素序的器件。
+ */
+#define U16_SWAP_BYTES(x)   ((uint16_t)((((x) & 0xFF00u) >> 8) | (((x) & 0x00FFu) << 8)))
+
 typedef enum
 {
     E_OK = 0,        /**< 成功 */

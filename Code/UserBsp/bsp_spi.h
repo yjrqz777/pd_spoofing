@@ -24,10 +24,12 @@ void BspSpiRst(uint8_t u8Level);
 void BspSpiDc(uint8_t u8Level);
 void BspSpiCs(uint8_t u8Level);
 void BspSpiSendByte(uint8_t u8Data);
-// eStatusDef BspLcdBusWrite(const uint8_t *pu8Buf, uint16_t u16Len);
-// eStatusDef BspLcdBusWriteDma(const uint8_t *pu8Buf, uint16_t u16Len);
-// uint8_t    BspLcdBusIsIdle(void);
-// uint8_t    BspLcdBusHasError(void);
+
+uint8_t BspSpiSendDmaStart(const uint8_t *pu8Data, uint16_t u16Len);
+void    BspSpiDmaService(void);
+uint8_t BspSpiDmaIsIdle(void);
+uint8_t BspSpiDmaHasError(void);
+
 #ifdef __cplusplus
 }
 #endif

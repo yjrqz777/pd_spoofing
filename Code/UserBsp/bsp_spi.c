@@ -1,14 +1,8 @@
-/**
- * @file bsp_spi.c
- * @brief Implements the LCD SPI1 and transmit-DMA interface.
- * @details SPI1 uses PA5 as SCK and PA7 as MOSI in one-line transmit Mode 2.
- *          DMA1 channel 3 transfers LCD pixel buffers asynchronously.
- */
 
 #include "bsp_spi.h"
 
-static volatile uint8_t u8SpiDmaIdle = 1u;
-static volatile uint8_t u8SpiError = 0u;
+static volatile uint8_t u8SpiDmaIdle = 1u;  /* 是否空闲 */
+static volatile uint8_t u8SpiError = 0u;    /* ERROR */ 
 
 
 static void Spi1GPIOInit(void)
@@ -45,11 +39,12 @@ static void Spi1Init(void)
     SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
     SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
     SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-    SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_16;
+    SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
     SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
     SPI_InitStructure.SPI_CRCPolynomial = 7u;
     SPI_Init(SPI1, &SPI_InitStructure);
     SPI_NSSInternalSoftwareConfig(SPI1, SPI_NSSInternalSoft_Set);
+    SPI_I2S_ITConfig(SPI1, SPI_I2S_IT_TXE, DISABLE);
     SPI_Cmd(SPI1, ENABLE);
 }
 
@@ -72,7 +67,7 @@ static void Spi1DmaInit(void)
     DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
     DMA_Init(DMA1_Channel3, &DMA_InitStructure);
     DMA_ClearITPendingBit(DMA1_IT_GL3);
-    DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_TE, ENABLE);
+    // DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_TE, ENABLE);
     SPI_I2S_DMACmd(SPI1, SPI_I2S_DMAReq_Tx, DISABLE);
 }
 
@@ -101,15 +96,12 @@ void BspSpiInit(void)
 
     Spi1GPIOInit();
     Spi1Init();
-    // Spi1DmaInit();
-    // Spi1NVICInit();
-}
+    Spi1DmaInit();
+    Spi1NVICInit();
 
-// /* LCD 硬件控制引脚
-//  * 注意：本板 N114-2413THBIG01-H13 的背光 LEDK 硬件直接接地（常亮），无背光控制脚 */
-// #define LCD_RST(x)  do { if (x) { GPIO_SetBits(LCD_RES_PORT, LCD_RES_PIN); } else { GPIO_ResetBits(LCD_RES_PORT, LCD_RES_PIN); } } while (0)
-// #define LCD_DC(x)   do { if (x) { GPIO_SetBits(LCD_DC_PORT,  LCD_DC_PIN);  } else { GPIO_ResetBits(LCD_DC_PORT,  LCD_DC_PIN);  } } while (0)
-// #define LCD_CS(x)   do { if (x) { GPIO_SetBits(LCD_CS_PORT,  LCD_CS_PIN);  } else { GPIO_ResetBits(LCD_CS_PORT,  LCD_CS_PIN);  } } while (0)
+    u8SpiDmaIdle = 1u;
+    u8SpiError   = 0u;
+}
 
 void BspSpiRst(uint8_t u8Level)
 {
@@ -133,118 +125,74 @@ void BspSpiSendByte(uint8_t u8Data)
     }
 }
 
-// /**
-//  * @brief Sends a byte buffer through SPI1 using polling.
-//  * @param[in] pu8Data Pointer to the source buffer.
-//  * @param[in] u16Len Number of bytes to send.
-//  */
-// void BspSpiWriteBufferBlocking(const uint8_t *pu8Data, uint16_t u16Len)
-// {
-//     uint16_t Index;
+uint8_t BspSpiSendDmaStart(const uint8_t *pu8Data, uint16_t u16Len)
+{
+    if (pu8Data == NULL || u16Len == 0u)    
+    {
+        return 1;
+    }
+    if ((u8SpiDmaIdle == 0u) || (u8SpiError != 0u)) /* 忙或已锁死 */
+    { 
+        return 1; 
+    }   
 
-//     if (pu8Data == 0)
-//     {
-//         return;
-//     }
+    u8SpiDmaIdle = 0u; /* 标记为忙 */
+    DMA_Cmd(DMA1_Channel3, DISABLE);
+    DMA_ClearFlag(DMA1_FLAG_TC3 | DMA1_FLAG_TE3 | DMA1_IT_GL3);
+    DMA_SetCurrDataCounter(DMA1_Channel3, u16Len);
+    DMA1_Channel3->MADDR = (uint32_t)pu8Data;
+    SPI_I2S_DMACmd(SPI1, SPI_I2S_DMAReq_Tx, ENABLE);
+    DMA_Cmd(DMA1_Channel3, ENABLE);
+    return 0;
+}
 
-//     for (Index = 0u; Index < u16Len; Index++)
-//     {
-//         BspSpiWriteByte(pu8Data[Index]);
-//     }
-// }
 
-// /**
-//  * @brief Starts an asynchronous SPI1 transmit using DMA1 channel 3.
-//  * @param[in] pu8Data Pointer to data that remains valid until completion.
-//  * @param[in] u16Len Number of bytes to transmit.
-//  * @retval E_OK The transfer was started.
-//  * @retval E_BUSY A previous DMA transfer is active.
-//  * @retval E_ERROR The parameters or SPI state are invalid.
-//  */
-// eStatusDef BspSpiWriteBufferDma(const uint8_t *pu8Data, uint16_t u16Len)
-// {
-// #if LCD_IO_STATIC_TEST_ENABLE
-//     (void)pu8Data;
-//     (void)u16Len;
-//     return E_ERROR;
-// #else
-//     if ((pu8Data == 0) || (u16Len == 0u) || (u8SpiError != 0u))
-//     {
-//         return E_ERROR;
-//     }
+void BspSpiDmaService(void)
+{
+    uint32_t Timeout = 10000u;
+    if (u8SpiDmaIdle != 0u)/* 空闲返回 */
+    {
+        return;
+    }
+    
+    if (DMA_GetFlagStatus(DMA1_FLAG_TC3) == SET)
+    {
 
-//     if (u8SpiDmaIdle == 0u)
-//     {
-//         return E_BUSY;
-//     }
+        DMA_ClearFlag(DMA1_FLAG_TC3);
 
-//     u8SpiDmaIdle = 0u;
-//     DMA_Cmd(DMA1_Channel3, DISABLE);
-//     DMA_SetCurrDataCounter(DMA1_Channel3, u16Len);
-//     DMA1_Channel3->MADDR = (uint32_t)pu8Data;
-//     DMA_ClearITPendingBit(DMA1_IT_GL3);
-//     SPI_I2S_DMACmd(SPI1, SPI_I2S_DMAReq_Tx, ENABLE);
-//     DMA_Cmd(DMA1_Channel3, ENABLE);
+        while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET) && (Timeout != 0u))
+        {
+            Timeout--;
+        }
+        if (Timeout == 0u) 
+        { 
+            u8SpiError = 1u; 
+        }
 
-//     return E_OK;
-// #endif
-// }
+        DMA_Cmd(DMA1_Channel3, DISABLE);
+        SPI_I2S_DMACmd(SPI1, SPI_I2S_DMAReq_Tx, DISABLE);
+        u8SpiDmaIdle = 1u;
+    }
+    else if (DMA_GetFlagStatus(DMA1_FLAG_TE3) == SET)/* 发送 错误 处理 */
+    {
+        DMA_ClearFlag(DMA1_FLAG_TE3);
+        DMA_Cmd(DMA1_Channel3, DISABLE);
+        SPI_I2S_DMACmd(SPI1, SPI_I2S_DMAReq_Tx, DISABLE);
+        u8SpiDmaIdle = 1u;
+        u8SpiError = 1u;
+    }
+}
 
-// /**
-//  * @brief Reports whether the transmit DMA channel is idle.
-//  * @retval 1 No DMA transfer is active.
-//  * @retval 0 A DMA transfer is active.
-//  */
-// uint8_t BspSpiIsIdle(void)
-// {
-//     return u8SpiDmaIdle;
-// }
 
-// /**
-//  * @brief Reports whether an SPI or DMA error occurred.
-//  * @retval 1 An error or timeout occurred.
-//  * @retval 0 No error occurred.
-//  */
-// uint8_t BspSpiHasError(void)
-// {
-//     return u8SpiError;
-// }
 
-// /**
-//  * @brief Handles SPI1 transmit completion and errors from DMA1 channel 3.
-//  */
-// void DMA1_Channel3_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
-// void DMA1_Channel3_IRQHandler(void)
-// {
-//     uint32_t Timeout;
 
-//     if (DMA_GetITStatus(DMA1_IT_TE3) != RESET)
-//     {
-//         DMA_ClearITPendingBit(DMA1_IT_GL3);
-//         DMA_Cmd(DMA1_Channel3, DISABLE);
-//         SPI_I2S_DMACmd(SPI1, SPI_I2S_DMAReq_Tx, DISABLE);
-//         u8SpiError = 1u;
-//         u8SpiDmaIdle = 1u;
-//         return;
-//     }
 
-//     if (DMA_GetITStatus(DMA1_IT_TC3) != RESET)
-//     {
-//         DMA_ClearITPendingBit(DMA1_IT_GL3);
-//         DMA_Cmd(DMA1_Channel3, DISABLE);
-//         SPI_I2S_DMACmd(SPI1, SPI_I2S_DMAReq_Tx, DISABLE);
 
-//         Timeout = BSP_SPI_TIMEOUT_COUNT;
-//         while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) != RESET) &&
-//                (Timeout != 0u))
-//         {
-//             Timeout--;
-//         }
-
-//         if (Timeout == 0u)
-//         {
-//             u8SpiError = 1u;
-//         }
-//         u8SpiDmaIdle = 1u;
-//     }
-// }
+uint8_t BspSpiDmaIsIdle(void)
+{
+    return u8SpiDmaIdle;
+}
+uint8_t BspSpiDmaHasError(void)
+{
+    return u8SpiError;
+}
