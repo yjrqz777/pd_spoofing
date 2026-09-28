@@ -37,10 +37,28 @@ void NMI_Handler(void)
  */
 void HardFault_Handler(void)
 {
-  NVIC_SystemReset();
-  while (1)
-  {
-  }
+    uint32_t u32Mcause;
+    uint32_t u32Mepc;
+    uint32_t u32Mtval;
+    uint32_t u32Mstatus;
+
+    /* 必须先保存异常现场，后续函数调用可能改变部分 CSR。 */
+    u32Mcause = __get_MCAUSE();
+    u32Mepc = __get_MEPC();
+    u32Mtval = __get_MTVAL();
+    u32Mstatus = __get_MSTATUS();
+
+    printf("\r\n*** HARD FAULT ***\r\n");
+    printf("MCAUSE  = 0x%08lx\r\n", (unsigned long)u32Mcause);
+    printf("MEPC    = 0x%08lx\r\n", (unsigned long)u32Mepc);
+    printf("MTVAL   = 0x%08lx\r\n", (unsigned long)u32Mtval);
+    printf("MSTATUS = 0x%08lx\r\n", (unsigned long)u32Mstatus);
+    printf("******************\r\n");
+
+    NVIC_SystemReset();
+    while (1)
+    {
+    }
 }
 
 /*********************************************************************
