@@ -18,6 +18,8 @@
 
 #include "UserDev/button/dev_button.h"
 #include "UserDev/st7789v/dev_st7789v.h"
+#include "UserDev/sensor/dev_sensor.h"
+
 #include "UserApp/user_system.h"
 #include "UserApp/user_display.h"
 #include "UserApp/user_sensor.h"
@@ -97,7 +99,7 @@ int main(void)
     {
         PT_TASK_REG(0, BspIwdgTask);
         PT_TASK_REG(1, UserSystemTask);
-        PT_TASK_REG(2, BspSensorTask);
+        PT_TASK_REG(2, DevSensorTask);
         PT_TASK_REG(3, UserDisplayTask);
         PT_TASK_REG(4, UsrButtonTask);
         PT_TASK_REG(5, DevSt7789vTask);
