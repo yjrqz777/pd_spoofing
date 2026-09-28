@@ -129,10 +129,10 @@
 /** @brief ADC 每 LSB 对应电压（V） */
 #define BOARD_ADC_LSB_VOLT          (BOARD_ADC_VREF / BOARD_ADC_FULL_SCALE)
 
-/** @brief VOUT 分压比：(470k + 68k) / 68k ≈ 7.9118 */
-#define BOARD_VOUT_DIV_RATIO        ((470.0f + 68.0f) / 68.0f)
-/** @brief USB-VBUS 分压比：(470k + 68k) / 68k ≈ 7.9118 */
-#define BOARD_VBUS_DIV_RATIO        ((470.0f + 68.0f) / 68.0f)
+/** @brief VOUT 分压比：(47k + 6.8k) / 6.8k ≈ 7.9118 */
+#define BOARD_VOUT_DIV_RATIO        ((47.0f + 6.8f) / 6.8f)
+/** @brief USB-VBUS 分压比：(47k + 6.8k) / 6.8k ≈ 7.9118 */
+#define BOARD_VBUS_DIV_RATIO        ((47.0f + 6.8f) / 6.8f)
 
 /** @brief 电流采样增益：INA180A2 = 50 V/V */
 #define BOARD_IBUS_GAIN             (50.0f)
