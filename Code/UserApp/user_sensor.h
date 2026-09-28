@@ -5,6 +5,6 @@
 
 #define SNESOR_TASK_MS (10)
 
-uint16_t BspSensorTask(void);
+// uint16_t UserSensorTask(void);
 
 #endif 
