@@ -41,6 +41,10 @@ void BspGpioSetVout(uint8_t val)
 {
     GPIO_WriteBit(VOUT_EN_PORT, VOUT_EN_PIN, val ? Bit_SET : Bit_RESET);
 }
+uint8_t BspGpioReadVoutFg(void)
+{
+    GPIO_ReadOutputDataBit(VOUT_EN_PORT, VOUT_EN_PIN);
+}
 
 void BspGpioSetLed(uint8_t val)
 {

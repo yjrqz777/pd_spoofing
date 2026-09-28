@@ -41,7 +41,7 @@ uint16_t BspIwdgTask(void)
     {
         PT_WAIT_UNTIL(IWDG_TASK_MS / OS_TICK_MS);
         IWDG_ReloadCounter();	//Feed dog
-        BspLedToggle();
+        // BspLedToggle();
     }
     PT_END();
 }

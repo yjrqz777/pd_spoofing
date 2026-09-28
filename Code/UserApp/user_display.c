@@ -8,6 +8,7 @@
 #include "UserApp/user_system.h"
 #include "Components/font/font_inter_28.h"
 
+#define MID_OFFSET (10)
 
 typedef struct sDisModeTableDef
 {
@@ -99,7 +100,7 @@ void DisplayPowerOn(void)
 
 static void DisplayOff(void)
 {
-
+    BspGpioSetLed(BspGpioReadVoutFg());
     ColorHsvToRgb(DISPLAY_HUE_MAGENTA, 255, 20, &u8Red, &u8Green, &u8Blue);
     DevWs2812Fill(u8Red, u8Green, u8Blue);
 
@@ -108,8 +109,7 @@ static void DisplayOff(void)
     DevSt7789vFillRectStart(0, 0,                   ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_RED);
     DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3,    ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_GREEN);
     DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3*2,  ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_BLUE);
-
-    DevSt7789vFillRectStart(ST7789V_WIDTH/2, 0,     1, ST7789V_HEIGHT, COLOR_WHITE);
+    // DevSt7789vFillRectStart(ST7789V_WIDTH/2, 0,     1, ST7789V_HEIGHT, COLOR_WHITE);
 }
 
 
@@ -130,16 +130,22 @@ void DisplayRun(void)
     static uint16_t u16colcor = 0;
     // sprintf(string,"%0.2f",i+=0.01);
     ColorHsvToRgb(u16colcor++, 255, 20, &u8Red, &u8Green, &u8Blue);
-    DevWs2812SetPixel(0, u8Red, u8Green, u8Blue);
+    DevWs2812SetPixel(0, u8Red, u8Green, u8Blue );
 
-    sprintf(string[0],"%0.1f",DevSensorGetValue(E_DEV_VBUS));
-    sprintf(string[1],"%0.1f",DevSensorGetValue(E_DEV_VOUT));
-    sprintf(string[2],"%0.1f",DevSensorGetValue(E_DEV_IBUS));
-    sprintf(string[3],"%0.1f",DevSensorGetValue(E_DEV_POW));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3-9,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[0],"mV",2));
-    (void)DevSt7789vDrawText(ST7789V_WIDTH/2,   ST7789V_HEIGHT/3-9,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[1],"mV",2));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3*2-9, &gtFontInter28, COLOR_WHITE, COLOR_GREEN, StrAddUnit(string[2],"mA",2));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT-9,     &gtFontInter28, COLOR_WHITE, COLOR_BLUE,  StrAddUnit(string[3],"mW",2));
+    sprintf(string[0],"%0.2f",DevSensorGetValue(E_DEV_VBUS));
+    sprintf(string[1],"%0.2f",DevSensorGetValue(E_DEV_VOUT));
+    sprintf(string[2],"%0.2f",DevSensorGetValue(E_DEV_IBUS));
+    sprintf(string[3],"%0.2f",DevSensorGetValue(E_DEV_POW));
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3-MID_OFFSET,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[0],"V",2));
+    (void)DevSt7789vDrawText(ST7789V_WIDTH/2,   ST7789V_HEIGHT/3-MID_OFFSET,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[1],"V",2));
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3*2-MID_OFFSET, &gtFontInter28, COLOR_WHITE, COLOR_GREEN, StrAddUnit(string[2],"A",2));
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT-MID_OFFSET,     &gtFontInter28, COLOR_WHITE, COLOR_BLUE,  StrAddUnit(string[3],"W",2));
+
+
+    BspGpioSetLed(BspGpioReadVoutFg());
+
+
+
 }
 
 

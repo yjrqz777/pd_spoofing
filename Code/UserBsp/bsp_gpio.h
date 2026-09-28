@@ -42,4 +42,5 @@ void BspGpioSetVout(uint8_t val);
 void BspLedToggle(void);
 void BspGpioInit(void);
 uint16_t BspGpioGetButtonMask(void);
+uint8_t BspGpioReadVoutFg(void);
 #endif 

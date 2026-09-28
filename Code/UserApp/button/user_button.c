@@ -16,15 +16,19 @@ extern void UsrButtonPdInc(void);
 extern void UsrButtonPdDec(void);
 extern void UsrButtonPdON(void);
 extern void UsrButtonPdTest(void);
+extern void UserButtonPowerOn(void);
+extern void UserButtonPowerOnUp(void);
 /**
  * @brief  注册原静态表的默认条目，不调用则订阅表为空。
  */
 void UsrButtonRegisterDefault(void)
 {
-    (void)DevButtonRegister(E_BSP_KEY_1,               E_DEV_BTN_SINGLE_CLICK, UsrButtonPdInc);
-    (void)DevButtonRegister(E_BSP_KEY_2,               E_DEV_BTN_SINGLE_CLICK, UsrButtonPdDec);
-    (void)DevButtonRegister(E_BSP_KEY_3,               E_DEV_BTN_SINGLE_CLICK, UsrButtonPdON);
-    (void)DevButtonRegister(E_BSP_KEY_1 | E_BSP_KEY_2, E_DEV_BTN_SINGLE_CLICK, UsrButtonPdTest);
+    (void)DevButtonRegister(E_BSP_KEY_1,               E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdInc);
+    (void)DevButtonRegister(E_BSP_KEY_2,               E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdDec);
+    (void)DevButtonRegister(E_BSP_KEY_3,               E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdON);
+    (void)DevButtonRegister(E_BSP_KEY_1 | E_BSP_KEY_2, E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdTest);
+    (void)DevButtonRegister(E_BSP_KEY_3,               E_DEV_BTN_LONG_HOLD,     UserButtonPowerOn);
+    (void)DevButtonRegister(E_BSP_KEY_3,               E_DEV_BTN_UP,            UserButtonPowerOnUp);
 }
 
 uint16_t UsrButtonTask(void)

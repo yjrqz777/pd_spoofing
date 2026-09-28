@@ -14,20 +14,24 @@
 #include <stdio.h>
 #include "user_button.h"
 #include "UserApp/user_system.h"
+
+static uint8_t i = 0;
 void UsrButtonPdInc(void)
 {
     log_info("UsrButtonPdInc");
+    BspGpioSetVout(0);
 }
 
 void UsrButtonPdDec(void)
 {
     log_info("UsrButtonPdDec");
+    BspGpioSetVout(0);
 }
 
 void UsrButtonPdON(void)
 {
     log_info("UsrButtonPdON");
-
+    BspGpioSetVout(0);
     if (tSysData.eState < E_SYSTEM_OFF)
     {
         return;
@@ -46,3 +50,24 @@ void UsrButtonPdTest(void)
 {
     log_info("UsrButtonPdTest");
 }
+
+void UserButtonPowerOn(void)
+{
+    if (tSysData.eState < E_SYSTEM_OFF)
+    {
+        return;
+    }
+    log_info("UsrButton Power ON %d", i);
+    if (i++ > 3000 / DEV_BTN_HOLD_UPDATA)
+    {
+        BspGpioSetVout(1);
+        i = 0;
+    }
+}
+
+void UserButtonPowerOnUp(void)
+{
+    i = 0;
+    log_info("UsrButton Power Up %d", i);
+}
+

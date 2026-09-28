@@ -66,7 +66,7 @@ static void User_Init(void)
     BspAdcInit();
 
     BspSpiInit();
-    BspGpioSetVout(1);
+    // BspGpioSetVout(1);
     
     DevSt7789vInit();
 // log_debug("ADC raw vout=%u ibus=%u", 1, 1);
