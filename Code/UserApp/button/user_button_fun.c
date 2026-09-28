@@ -27,7 +27,19 @@ void UsrButtonPdDec(void)
 void UsrButtonPdON(void)
 {
     log_info("UsrButtonPdON");
-    tSysData.eState = E_SYSTEM_RUN;
+
+    if (tSysData.eState < E_SYSTEM_OFF)
+    {
+        return;
+    }
+    if (tSysData.eState == E_SYSTEM_OFF)
+    {
+        tSysData.eState = E_SYSTEM_RUN;
+        return;
+    }
+    tSysData.eState = E_SYSTEM_OFF;
+    
+
 }
 
 void UsrButtonPdTest(void)

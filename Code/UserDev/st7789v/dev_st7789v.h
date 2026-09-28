@@ -64,27 +64,27 @@
 /* 颜色定义（RGB565 格式）
  * 注释里写的是这个值实际显示出来的颜色，不是宏名的字面意思。
  * 标注"名字不符"的几个是从原厂示例驱动带过来的，名字和颜色对不上。 */
-#define ST7789V_WHITE          (uint16_t)0xFFFF   /* 白     #FFFFFF */
-#define ST7789V_BLACK          (uint16_t)0x0000   /* 黑     #000000 */
-#define ST7789V_BLUE           (uint16_t)0x001F   /* 纯蓝   #0000FF */
-#define ST7789V_BRED           (uint16_t)0XF81F   /* 品红   #FF00FF  名字不符，与 MAGENTA 同值 */
-#define ST7789V_GRED           (uint16_t)0XFFE0   /* 纯黄   #FFFF00  名字不符，与 YELLOW 同值 */
-#define ST7789V_GBLUE          (uint16_t)0X07FF   /* 青     #00FFFF  名字不符 */
-#define ST7789V_RED            (uint16_t)0xF800   /* 纯红   #FF0000 */
-#define ST7789V_MAGENTA        (uint16_t)0xF81F   /* 品红   #FF00FF */
-#define ST7789V_GREEN          (uint16_t)0x07E0   /* 纯绿   #00FF00 */
-#define ST7789V_CYAN           (uint16_t)0x7FFF   /* 浅青   #7BFFFF  比标准青亮一档 */
-#define ST7789V_YELLOW         (uint16_t)0xFFE0   /* 纯黄   #FFFF00 */
-#define ST7789V_BROWN          (uint16_t)0XBC40   /* 棕     #BD8600 */
-#define ST7789V_BRRED          (uint16_t)0XFC07   /* 橙红   #FF8239 */
-#define ST7789V_GRAY           (uint16_t)0X8430   /* 灰     #848684 */
-#define ST7789V_DARKBLUE       (uint16_t)0X01CF   /* 深蓝   #001C7B */
-#define ST7789V_LIGHTBLUE      (uint16_t)0X7D7C   /* 浅青蓝 #7BD7E7 */
-#define ST7789V_GRAYBLUE       (uint16_t)0X5458   /* 蓝灰   #528AC6 */
-#define ST7789V_LIGHTGREEN     (uint16_t)0X841F   /* 紫蓝   #8482FF  名字不符，不是绿色 */
-#define ST7789V_LGRAY          (uint16_t)0XC618   /* 浅灰   #C6C3C6 */
-#define ST7789V_LGRAYBLUE      (uint16_t)0XA651   /* 浅黄绿 #A5CB8C  名字不符，实际偏绿 */
-#define ST7789V_LBBLUE         (uint16_t)0X2B12   /* 中蓝   #296194 */
+#define COLOR_WHITE          (uint16_t)0xFFFF   /* 白     #FFFFFF */
+#define COLOR_BLACK          (uint16_t)0x0000   /* 黑     #000000 */
+#define COLOR_BLUE           (uint16_t)0x001F   /* 纯蓝   #0000FF */
+#define COLOR_BRED           (uint16_t)0XF81F   /* 品红   #FF00FF  名字不符，与 MAGENTA 同值 */
+#define COLOR_GRED           (uint16_t)0XFFE0   /* 纯黄   #FFFF00  名字不符，与 YELLOW 同值 */
+#define COLOR_GBLUE          (uint16_t)0X07FF   /* 青     #00FFFF  名字不符 */
+#define COLOR_RED            (uint16_t)0xF800   /* 纯红   #FF0000 */
+#define COLOR_MAGENTA        (uint16_t)0xF81F   /* 品红   #FF00FF */
+#define COLOR_GREEN          (uint16_t)0x07E0   /* 纯绿   #00FF00 */
+#define COLOR_CYAN           (uint16_t)0x7FFF   /* 浅青   #7BFFFF  比标准青亮一档 */
+#define COLOR_YELLOW         (uint16_t)0xFFE0   /* 纯黄   #FFFF00 */
+#define COLOR_BROWN          (uint16_t)0XBC40   /* 棕     #BD8600 */
+#define COLOR_BRRED          (uint16_t)0XFC07   /* 橙红   #FF8239 */
+#define COLOR_GRAY           (uint16_t)0X8430   /* 灰     #848684 */
+#define COLOR_DARKBLUE       (uint16_t)0X01CF   /* 深蓝   #001C7B */
+#define COLOR_LIGHTBLUE      (uint16_t)0X7D7C   /* 浅青蓝 #7BD7E7 */
+#define COLOR_GRAYBLUE       (uint16_t)0X5458   /* 蓝灰   #528AC6 */
+#define COLOR_LIGHTGREEN     (uint16_t)0X841F   /* 紫蓝   #8482FF  名字不符，不是绿色 */
+#define COLOR_LGRAY          (uint16_t)0XC618   /* 浅灰   #C6C3C6 */
+#define COLOR_LGRAYBLUE      (uint16_t)0XA651   /* 浅黄绿 #A5CB8C  名字不符，实际偏绿 */
+#define COLOR_LBBLUE         (uint16_t)0X2B12   /* 中蓝   #296194 */
 
 
 /* 外部函数声明 */

@@ -98,33 +98,46 @@ void DisplayPowerOn(void)
 
 static void DisplayOff(void)
 {
-    static char string[6];
-    static float i=0.0;
+
     ColorHsvToRgb(DISPLAY_HUE_MAGENTA, 255, 20, &u8Red, &u8Green, &u8Blue);
     DevWs2812Fill(u8Red, u8Green, u8Blue);
-    sprintf(string,"%0.1f",i+=0.1);
+
     /* 先写入本帧绘制列表，最后由 Show 一次提交并异步发送 */
-    (void)DevSt7789vDrawText(0, 24, &gtFontInter32, ST7789V_WHITE, ST7789V_MAGENTA, string);
-    // (void)DevSt7789vDrawText(0, 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
-    // (void)DevSt7789vDrawText(0, 17 + 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
-    // (void)DevSt7789vDrawText(0, 17 + 17 + 17 + 17, &gtFontInter24, ST7789V_WHITE, ST7789V_MAGENTA, string);
-    (void)DevSt7789vShow();
+    
+    DevSt7789vFillRectStart(0, 0,                   ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_RED);
+    DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3,    ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_GREEN);
+    DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3*2,  ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_BLUE);
+
 }
 
+
+
+char *StrAddUnit(char *p, const char *unit, uint8_t len)
+{
+    char *end = p + strlen(p);   // 跳过原有字符串
+    memcpy(end, unit, len);      // 按 len 追加单位字符
+    end[len] = '\0';             // 补字符串结束符
+    return p;
+}
 
 
 
 void DisplayRun(void)
 {
+    static char string[9];
+    static float i=0.0;
     static uint16_t timeCount = 0;
     static uint16_t u16colcor = 0;
     uint8_t u8Ok;
-    ColorHsvToRgb(u16colcor, 255, 20, &u8Red, &u8Green, &u8Blue);
+    sprintf(string,"%0.2f",i+=0.01);
+    ColorHsvToRgb(u16colcor++, 255, 20, &u8Red, &u8Green, &u8Blue);
     DevWs2812SetPixel(0, u8Red, u8Green, u8Blue);
-    u16colcor   = (uint8_t)(rand() % COLOR_HUE_MAX);
+    // u16colcor   = (uint8_t)(rand() % COLOR_HUE_MAX);
 
-
-
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3-9,   &gtFontInter32, COLOR_WHITE, COLOR_RED,   StrAddUnit(string,"mV",2));
+    (void)DevSt7789vDrawText(ST7789V_WIDTH/2,   ST7789V_HEIGHT/3-9,   &gtFontInter32, COLOR_WHITE, COLOR_RED,   StrAddUnit(string,"mV",2));
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3*2-9, &gtFontInter32, COLOR_WHITE, COLOR_GREEN, StrAddUnit(string,"mA",2));
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT-9,     &gtFontInter32, COLOR_WHITE, COLOR_BLUE,  StrAddUnit(string,"mP",2));
 }
 
 
@@ -144,6 +157,7 @@ uint16_t UserDisplayTask(void)
         sDisModeTable[tSysData.eState].pfDisplay();
         // DisplayRun();
 
+        (void)DevSt7789vShow();
         DevWs2812Flush();
 
     }

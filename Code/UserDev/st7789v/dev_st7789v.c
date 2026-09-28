@@ -353,7 +353,7 @@ void DevSt7789vInit(void)
     St7789vSendCmd(0x29);
     Delay_Ms(20);
 
-	(void)DevSt7789vFillScreenStart(ST7789V_MAGENTA);
+	(void)DevSt7789vFillScreenStart(COLOR_MAGENTA);
     (void)DevSt7789vShow();
     // DevSt7789vFillRect(ST7789V_RED);
 	// DevSt7789vDrawPoint(5, 5, ST7789V_BLUE);

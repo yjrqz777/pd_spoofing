@@ -5,7 +5,7 @@
  * @note    由 tools/font_converter/generate_fonts.py 生成。
  *          字体来源：Inter SemiBold, https://github.com/rsms/inter
  *          许可证见 tools/font_converter/LICENSE.txt（SIL Open Font License 1.1）。
- *          字符子集：0123456789.-
+ *          字符子集：0123456789.-VWAMm
  *          字形墨迹：基线以上 24 行、以下 0 行，一行最高占 24 行。
  *                    定格布局：顶边 = 基线 - 24；行间距用 39（line_height）。
  *          字体格式：2bpp（每像素 0..3，每字节打包 4 像素，高位在前，逐行对齐）。
