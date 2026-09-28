@@ -6,7 +6,7 @@
 #include "UserDev/sensor/dev_sensor.h"
 
 #include "UserApp/user_system.h"
-#include "Components/font/font_inter_32.h"
+#include "Components/font/font_inter_28.h"
 
 
 typedef struct sDisModeTableDef
@@ -136,10 +136,10 @@ void DisplayRun(void)
     sprintf(string[1],"%0.1f",DevSensorGetValue(E_DEV_VOUT));
     sprintf(string[2],"%0.1f",DevSensorGetValue(E_DEV_IBUS));
     sprintf(string[3],"%0.1f",DevSensorGetValue(E_DEV_POW));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3-9,   &gtFontInter32, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[0],"mV",2));
-    (void)DevSt7789vDrawText(ST7789V_WIDTH/2,   ST7789V_HEIGHT/3-9,   &gtFontInter32, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[1],"mV",2));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3*2-9, &gtFontInter32, COLOR_WHITE, COLOR_GREEN, StrAddUnit(string[2],"mA",2));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT-9,     &gtFontInter32, COLOR_WHITE, COLOR_BLUE,  StrAddUnit(string[3],"mP",2));
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3-9,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[0],"mV",2));
+    (void)DevSt7789vDrawText(ST7789V_WIDTH/2,   ST7789V_HEIGHT/3-9,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[1],"mV",2));
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3*2-9, &gtFontInter28, COLOR_WHITE, COLOR_GREEN, StrAddUnit(string[2],"mA",2));
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT-9,     &gtFontInter28, COLOR_WHITE, COLOR_BLUE,  StrAddUnit(string[3],"mW",2));
 }
 
 
