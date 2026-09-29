@@ -59,7 +59,7 @@ static void User_Init(void)
 
     log_debug("Init begin");
 
-    BspIwdgInit(IWDG_Prescaler_32, 4000 );   // 2.7s IWDG reset
+    BspIwdgInit(IWDG_Prescaler_32, 4000);   // 2.7s IWDG reset
     BspGpioInit();
     BspTimeInit();
     BspWs2812Init();

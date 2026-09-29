@@ -1,6 +1,12 @@
 
 
 #include "dev_st7789v.h"
+#include "Components/font/img_xj_bw.h"
+
+/* 点阵尺寸必须和当前屏幕方向一致，对不上就用 tools/picture/img2bit.py 重新生成 */
+#if (ST7789V_WIDTH != IMG_XJ_BW_WIDTH) || (ST7789V_HEIGHT != IMG_XJ_BW_HEIGHT)
+#error "img_xj_bw 尺寸与 ST7789V_WIDTH/HEIGHT 不一致，请重新生成 img_xj_bw.h/.c"
+#endif
 
 /** @brief 一帧中的一个绘制项（模块内部，不对外暴露） */
 #define ST7789V_DRAW_ITEM_NUM  (16u)
@@ -268,7 +274,66 @@ void DevSt7789vDrawCircle(uint16_t x0,uint16_t y0,uint8_t r,uint16_t color)
 	}
 }
 
+/** @brief 当前正在显示的 1bpp 黑白点阵，按行连续存放 */
+static const uint8_t *pu8BwImg = 0;
 
+/**
+ * @brief  1bpp 黑白点阵的行内容回调：把第 u16Row 行展开成黑/白像素
+ * @param[in]  u16Row   行号，0 = 图像顶边
+ * @param[in]  u16W     该行宽度（像素）
+ * @param[out] pu16Line 输出缓冲，填原始 RGB565
+ * @note   每行 IMG_XJ_BW_ROW_BYTES 字节，高位在左，1 = 白、0 = 黑。
+ *         因为矩形从 (0,0) 起，u16Row 就是图像行号。
+ */
+static void BwImgRowFn(uint16_t u16Row, uint16_t u16W, uint16_t *pu16Line)
+{
+    const uint8_t *pu8Row;
+    uint16_t       i;
+    uint8_t        u8Bits = 0u;
+
+    if (pu8BwImg == 0)
+    {
+        return;
+    }
+
+    /* 定位到点阵里第 u16Row 行的首字节：点阵按行连续存放，每行
+       IMG_XJ_BW_ROW_BYTES 字节，所以行首 = 基址 + 行号 * 每行字节数。
+       先转 uint32_t 再乘：行号偏大时 u16Row * 30 会在 16 位里溢出。 */
+    pu8Row = pu8BwImg + ((uint32_t)u16Row * IMG_XJ_BW_ROW_BYTES);
+
+    for (i = 0u; i < u16W; i++)
+    {
+        if ((i & 7u) == 0u)                      /* i 是 8 的倍数：该换新的一字节了 */
+        {
+            u8Bits = *pu8Row;                    /* 取当前字节，里面装着 8 个像素 */
+            pu8Row++;                            /* 游标前移，后 8 个像素用下一字节 */
+        }
+
+        /* 高位在左：判 bit7 就得到最左边那个像素；取完左移一位，
+           让下一个像素升到 bit7，于是每轮都能用同一个 0x80 去判。 */
+        pu16Line[i] = ((u8Bits & 0x80u) != 0u) ? COLOR_WHITE : COLOR_BLACK;
+        u8Bits = (uint8_t)(u8Bits << 1);
+    }
+}
+
+/**
+ * @brief  整屏显示一张 1bpp 黑白点阵图
+ * @param[in] pu8Img 点阵数据，按行连续存放，每行 IMG_XJ_BW_ROW_BYTES 字节
+ * @retval 0 已写入当前帧；1 参数为空、正在发送或绘制列表已满
+ * @note   只把这一块排进当前帧，DMA 方式下还要再调 DevSt7789vShow() 才开始发送。
+ *         想在图片上叠字，先调本函数再调 DevSt7789vDrawText() 即可。
+ */
+uint8_t DevSt7789vShowImg(const uint8_t *pu8Img)
+{
+    if (pu8Img == 0)
+    {
+        return 1u;
+    }
+
+    pu8BwImg = pu8Img;
+
+    return DevSt7789vBlitRectStart(0u, 0u, ST7789V_WIDTH, ST7789V_HEIGHT, BwImgRowFn);
+}
 
 
 void DevSt7789vInit(void)
@@ -353,7 +418,11 @@ void DevSt7789vInit(void)
     St7789vSendCmd(0x29);
     Delay_Ms(20);
 
+    /* 先铺品红底色，再把启动图叠上去，最后一起提交。
+       顺序不能反：两块都排进同一帧后 Show() 才会开始发送，
+       否则底色会把图片盖掉。 */
 	(void)DevSt7789vFillScreenStart(COLOR_MAGENTA);
+    (void)DevSt7789vShowImg(gau8ImgXjBw[0]);
     (void)DevSt7789vShow();
     // DevSt7789vFillRect(ST7789V_RED);
 	// DevSt7789vDrawPoint(5, 5, ST7789V_BLUE);
@@ -584,18 +653,18 @@ static void TextRowFn(uint16_t u16Row, uint16_t u16W, uint16_t *pu16Line)
 uint8_t DevSt7789vDrawText(int16_t i16X, int16_t i16BaselineY, const tFont *ptFont,
                            uint16_t u16Fg, uint16_t u16Bg, const char *pcText)
 {
-    const tFontGlyph *ptGlyph;
-    const char *pc;
-    int16_t i16PenX;
-    int16_t i16L;
-    int16_t i16T;
-    int16_t i16R;
-    int16_t i16B;
-    int16_t i16MinX = 0;
-    int16_t i16MaxX = 0;
-    int16_t i16MinY = 0;
-    int16_t i16MaxY = 0;
-    uint8_t u8Any = 0u;
+    const tFontGlyph *ptGlyph;          /* 当前字符在字库中查到的字形，0 = 该字符不在字库中 */
+    const char *pc;                     /* 遍历 pcText 的游标 */
+    int16_t i16PenX;                    /* 笔位置横坐标，画完一个字符按 advance 前移 */
+    int16_t i16L;                       /* 单个字形墨迹包围盒：左边界 */
+    int16_t i16T;                       /* 单个字形墨迹包围盒：上边界 */
+    int16_t i16R;                       /* 单个字形墨迹包围盒：右边界（不含，即 x 取不到该列） */
+    int16_t i16B;                       /* 单个字形墨迹包围盒：下边界（不含，即 y 取不到该行） */
+    int16_t i16MinX = 0;                /* 整串墨迹总包围盒：最小横坐标，即刷新区左边界 */
+    int16_t i16MaxX = 0;                /* 整串墨迹总包围盒：最大横坐标，即刷新区右边界 */
+    int16_t i16MinY = 0;                /* 整串墨迹总包围盒：最小纵坐标，即刷新区上边界 */
+    int16_t i16MaxY = 0;                /* 整串墨迹总包围盒：最大纵坐标，即刷新区下边界 */
+    uint8_t u8Any = 0u;                 /* 是否已累计到带墨迹的字形，0 = 目前还没有 */
 #if (ST7789V_USE_DMA != 0)
     uint8_t u8TextIndex;
 #endif
@@ -763,8 +832,14 @@ void DevSt7789vService(void)
 
     BspSpiDmaService();                          /* 先让 BSP 收尾上一行 */
 
-    if (u8Showing == 0u)        { return; }       /* Show 尚未提交 */
-    if (BspSpiDmaIsIdle() == 0u) { return; }      /* 上一行还在搬 */
+    if (u8Showing == 0u)/* Show 尚未提交 */
+    {
+        return;
+    } 
+    if (BspSpiDmaIsIdle() == 0u) /* 上一行还在搬 */
+    {
+        return;
+    }
 
     if (u8SendIndex >= u8DrawCount)              /* 整帧发送完成 */
     {

@@ -53,7 +53,7 @@ void UsrButtonPdTest(void)
 
 void UserButtonPowerOn(void)
 {
-    if (tSysData.eState < E_SYSTEM_OFF)
+    if (tSysData.eState < E_SYSTEM_RUN)
     {
         return;
     }

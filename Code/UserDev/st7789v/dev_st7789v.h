@@ -101,7 +101,9 @@ typedef void (*DevSt7789vRowFn)(uint16_t u16Row, uint16_t u16W, uint16_t *pu16Li
 
 void DevSt7789vInit(void);
 uint8_t  DevSt7789vFillRectStart(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t u16Color);
+uint8_t  DevSt7789vBlitRectStart(uint16_t x, uint16_t y, uint16_t w, uint16_t h, DevSt7789vRowFn pfnRow);
 uint8_t  DevSt7789vFillScreenStart(uint16_t u16Color);
+uint8_t  DevSt7789vShowImg(const uint8_t *pu8Img);
 uint8_t  DevSt7789vDrawText(int16_t i16X, int16_t i16BaselineY, const tFont *ptFont,
                             uint16_t u16Fg, uint16_t u16Bg, const char *pcText);
 uint8_t  DevSt7789vShow(void);

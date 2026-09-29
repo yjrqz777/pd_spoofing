@@ -7,6 +7,7 @@
 
 #include "UserApp/user_system.h"
 #include "Components/font/font_inter_28.h"
+#include "Components/font/img_xj_bw.h"
 
 #define MID_OFFSET (10)
 
@@ -105,10 +106,10 @@ static void DisplayOff(void)
     DevWs2812Fill(u8Red, u8Green, u8Blue);
 
     /* 先写入本帧绘制列表，最后由 Show 一次提交并异步发送 */
-    
-    DevSt7789vFillRectStart(0, 0,                   ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_RED);
-    DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3,    ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_GREEN);
-    DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3*2,  ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_BLUE);
+        (void)DevSt7789vShowImg(gau8ImgXjBw[0]);
+    // DevSt7789vFillRectStart(0, 0,                   ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_RED);
+    // DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3,    ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_GREEN);
+    // DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3*2,  ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_BLUE);
     // DevSt7789vFillRectStart(ST7789V_WIDTH/2, 0,     1, ST7789V_HEIGHT, COLOR_WHITE);
 }
 
