@@ -45,17 +45,22 @@ except ImportError:  # pragma: no cover - 环境缺依赖时给出明确提示
 #: 24px 数字字库只包含数值格式化用得到的字符
 DIGIT_CHARS = "0123456789.-VWAMm"
 
+#: 28px 字库在数字之外还要运行页的状态文字：
+#:   "INIT OK"  初始化成功
+#:   "PPS YES" / "PPS NO"  对端是否支持可调档
+STATUS_CHARS = " 0123456789.-VWAMmEIKNOPSTY"
+
 #: 16px 字库在数字之外还需要 OUTPUT 区域的 ON/OFF 文字，
 #: 以及顶部状态栏的 "POWER MONITOR" / "ONLINE" 标题（需要全部用到的字母与空格）
 DIGIT_AND_SWITCH_CHARS = " 0123456789.-EFLIMNOPRTW"
 
 #: 8px 标签字库只包含界面实际用到的字符
 #: （大写字母、数字、空格、点、短横线、斜杠）
-LABEL_CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-/"
+# LABEL_CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-/"
 
 #: (字库名, 像素高度, 字符子集)
 FONT_SET = (
-    ("font_inter_28", 28, DIGIT_CHARS),
+    ("font_inter_28", 28, STATUS_CHARS),
     ("font_inter_24", 24, DIGIT_CHARS),
     ("font_inter_16", 16, DIGIT_AND_SWITCH_CHARS),
     # ("font_inter_8", 8, LABEL_CHARS),

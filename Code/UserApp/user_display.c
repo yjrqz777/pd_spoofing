@@ -6,6 +6,7 @@
 #include "UserDev/sensor/dev_sensor.h"
 
 #include "UserApp/user_system.h"
+#include "UserApp/user_pd.h"
 #include "Components/font/font_inter_28.h"
 #include "Components/font/img_xj_bw.h"
 
@@ -18,6 +19,8 @@ typedef struct sDisModeTableDef
 } sDisModeTableDef;
 
 
+
+static uint8_t u8RunFg = 0;
 static void DisplayPowerOn(void);
 static void DisplayOff(void);
 static void DisplayRun(void);
@@ -99,17 +102,80 @@ void DisplayPowerOn(void)
     DisplayFlow();
 }
 
+/* 三色横带里文字的位置：每块高 = 屏高/3，28px 字形的墨迹高出基线 21 行，
+   于是基线 = 块顶 + 块高/2 + 21/2，文字在块里竖直居中。 */
+#define BAND_H            (ST7789V_HEIGHT/3)
+#define BAND_BASELINE(k)  (BAND_H*(k) + BAND_H/2 + 10)
+
+/**
+ * @brief  重刷三条底色横带（上红、中绿、下蓝）
+ * @retval 0 三块都排进了当前帧；1 没排上，需要下一拍重试
+ * @note   FillRectStart 在显示忙的时候直接返回 1，一块都排不进帧。所以调用方
+ *         必须看返回值再翻"底色已刷"的标志：否则这次重刷被丢掉、标志却翻了，
+ *         底色再也刷不回来，上一页的字（例如 INIT OK）就留在屏上。
+ */
+static uint8_t BandsRepaint(void)
+{
+    if (DevSt7789vFillRectStart(0, 0,            ST7789V_WIDTH, BAND_H, COLOR_RED)   != 0u)
+    {
+        return 1u;
+    }
+    if (DevSt7789vFillRectStart(0, BAND_H,       ST7789V_WIDTH, BAND_H, COLOR_GREEN) != 0u)
+    {
+        return 1u;
+    }
+    if (DevSt7789vFillRectStart(0, BAND_H * 2u,  ST7789V_WIDTH, BAND_H, COLOR_BLUE)  != 0u)
+    {
+        return 1u;
+    }
+
+    return 0u;
+}
+
 static void DisplayOff(void)
 {
+    char        acString[9];
+    const char *pcPps;
+    uint16_t    u16TextW;
+
     BspGpioSetLed(BspGpioReadVoutFg());
     ColorHsvToRgb(DISPLAY_HUE_MAGENTA, 255, 20, &u8Red, &u8Green, &u8Blue);
     DevWs2812Fill(u8Red, u8Green, u8Blue);
 
-    /* 先写入本帧绘制列表，最后由 Show 一次提交并异步发送 */
-        (void)DevSt7789vShowImg(gau8ImgXjBw[0]);
-    // DevSt7789vFillRectStart(0, 0,                   ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_RED);
-    // DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3,    ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_GREEN);
-    // DevSt7789vFillRectStart(0, ST7789V_HEIGHT/3*2,  ST7789V_WIDTH, ST7789V_HEIGHT/3, COLOR_BLUE);
+    pcPps = (UserPdHasPps() != 0u) ? "PPS YES" : "PPS NO";
+    sprintf(acString, "%0.2fV", UserPdGetTargetMv() / 1000.0f);
+
+
+    if (u8RunFg == 0)
+    {
+        log_info("DisplayOff: run fg=%d", u8RunFg);
+        /* 进这一页先重刷底色（上红中绿下蓝）：刷上了才翻标志，下一拍再写字 */
+        if (BandsRepaint() == 0u)
+        {
+            u8RunFg = 1;
+        }
+        return;
+    }
+    
+
+
+
+
+    /* 红色块：初始化成功 */
+    u16TextW = FontMeasureText(&gtFontInter28, "INIT OK");
+    (void)DevSt7789vDrawText((int16_t)((ST7789V_WIDTH - u16TextW) / 2u), (int16_t)BAND_BASELINE(0),
+                             &gtFontInter28, COLOR_WHITE, COLOR_RED, "INIT OK");
+
+    /* 绿色块：对端是否支持可调档（PPS） */
+    u16TextW = FontMeasureText(&gtFontInter28, pcPps);
+    (void)DevSt7789vDrawText((int16_t)((ST7789V_WIDTH - u16TextW) / 2u), (int16_t)BAND_BASELINE(1),
+                             &gtFontInter28, COLOR_WHITE, COLOR_GREEN, pcPps);
+
+    /* 蓝色块：当前档位电压 */
+    u16TextW = FontMeasureText(&gtFontInter28, acString);
+    (void)DevSt7789vDrawText((int16_t)((ST7789V_WIDTH - u16TextW) / 2u), (int16_t)BAND_BASELINE(2),
+                             &gtFontInter28, COLOR_WHITE, COLOR_BLUE, acString);
+
     // DevSt7789vFillRectStart(ST7789V_WIDTH/2, 0,     1, ST7789V_HEIGHT, COLOR_WHITE);
 }
 
@@ -129,9 +195,23 @@ void DisplayRun(void)
 {
     static char string[4][9];
     static uint16_t u16colcor = 0;
+
+    if (u8RunFg == 1)
+    {
+        log_info("DisplayRun: run fg=%d", u8RunFg);
+        /* 从关机页切过来：先重刷底色，上一页的字才会被盖掉 */
+        if (BandsRepaint() == 0u)
+        {
+            u8RunFg = 0;
+        }
+        return;
+    }
+
+
+    
     // sprintf(string,"%0.2f",i+=0.01);
-    ColorHsvToRgb(u16colcor++, 255, 20, &u8Red, &u8Green, &u8Blue);
-    DevWs2812SetPixel(0, u8Red, u8Green, u8Blue );
+    // ColorHsvToRgb(u16colcor++, 255, 20, &u8Red, &u8Green, &u8Blue);
+    // DevWs2812SetPixel(0, u8Red, u8Green, u8Blue );
 
     sprintf(string[0],"%0.2f",DevSensorGetValue(E_DEV_VBUS));
     sprintf(string[1],"%0.2f",DevSensorGetValue(E_DEV_VOUT));
