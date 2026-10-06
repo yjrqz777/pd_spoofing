@@ -27,6 +27,43 @@
 
 
 /**
+ * @brief  打印上一次的复位来源，读完清掉
+ * @note   要在别的初始化之前调，而且只能调一次：标志是"粘"的，
+ *         读完必须清，否则每次上电都会把老账重报一遍。
+ *         POR 和 PIN 在上电时通常一起置位，多条都打出来是正常的。
+ */
+static void System_PrintResetReason(void)
+{
+    if (RCC_GetFlagStatus(RCC_FLAG_PORRST) != RESET)
+    {
+        printf("reset: POR\r\n");       /* 上电复位 */
+    }
+    if (RCC_GetFlagStatus(RCC_FLAG_PINRST) != RESET)
+    {
+        printf("reset: PIN\r\n");       /* 复位脚：上电或按了复位键 */
+    }
+    if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST) != RESET)
+    {
+        printf("reset: IWDG\r\n");      /* 独立看门狗：上一次多半是卡死了 */
+    }
+    if (RCC_GetFlagStatus(RCC_FLAG_WWDGRST) != RESET)
+    {
+        printf("reset: WWDG\r\n");      /* 窗口看门狗 */
+    }
+    if (RCC_GetFlagStatus(RCC_FLAG_SFTRST) != RESET)
+    {
+        printf("reset: SOFT\r\n");      /* 软件复位 */
+    }
+    if (RCC_GetFlagStatus(RCC_FLAG_LPWRRST) != RESET)
+    {
+        printf("reset: LPWR\r\n");      /* 低功耗复位 */
+    }
+
+    RCC_ClearFlag();
+}
+
+
+/**
  * @brief  系统初始化
  */
 static void System_Init(void)
