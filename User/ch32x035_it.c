@@ -10,10 +10,26 @@
 * microcontroller manufactured by Nanjing Qinheng Microelectronics.
 *******************************************************************************/
 #include "ch32x035_it.h"
+#include "user_config.h"    /* BOOT_TRACE_ADDR：复位现场标记 */
 
 void NMI_Handler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 void HardFault_Handler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
-
+/* ========================================================================== *
+ *  6. 复位现场标记（临时诊断用）
+ *  ---------------------------------------------------------------------------
+ *  地址 0x20004700 在 .bss 之后（_ebss = 0x20000D84）、堆顶 0x20004800 之前，
+ *  本工程堆实际用不到这一段。复位不会清 SRAM，所以这块内容能说明上一次复位：
+ *    [0] == BOOT_TRACE_MAGIC → SRAM 还在，上一次不是掉电（异常/看门狗/软复位）
+ *    [0] != BOOT_TRACE_MAGIC → SRAM 丢了，上一次是真的掉电
+ *  写入方：User/main.c（上电打印并登记）、User/ch32x035_it.c（异常现场）。
+ * ========================================================================== */
+#define BOOT_TRACE_ADDR      0x20004700u
+#define BOOT_TRACE_MAGIC     0x424F4F54u   /* 'BOOT' */
+#define BOOT_TRACE_MAGIC_IDX 0u
+#define BOOT_TRACE_CAUSE_IDX 1u
+#define BOOT_TRACE_EPC_IDX   2u
+#define BOOT_TRACE_TVAL_IDX  3u
+#define BOOT_TRACE_NMI_IDX   4u
 /*********************************************************************
  * @fn      NMI_Handler
  *
@@ -23,6 +39,11 @@ void HardFault_Handler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
  */
 void NMI_Handler(void)
 {
+    volatile uint32_t *pu32 = (volatile uint32_t *)BOOT_TRACE_ADDR;
+
+    pu32[BOOT_TRACE_NMI_IDX]   = 1u;                    /* 留下痕迹，等看门狗复位后由 main 打印 */
+    pu32[BOOT_TRACE_MAGIC_IDX] = BOOT_TRACE_MAGIC;
+
     while (1)
   {
   }
@@ -47,6 +68,17 @@ void HardFault_Handler(void)
     u32Mepc = __get_MEPC();
     u32Mtval = __get_MTVAL();
     u32Mstatus = __get_MSTATUS();
+
+    /* 先落标记再打印：异常上下文里的 printf 有卡死的可能（UART 状态坏了就会一直等），
+       标记写在 SRAM，复位后由 main 打印，保证这条现场一定拿得到。 */
+    {
+        volatile uint32_t *pu32 = (volatile uint32_t *)BOOT_TRACE_ADDR;
+
+        pu32[BOOT_TRACE_CAUSE_IDX] = u32Mcause;
+        pu32[BOOT_TRACE_EPC_IDX]   = u32Mepc;
+        pu32[BOOT_TRACE_TVAL_IDX]  = u32Mtval;
+        pu32[BOOT_TRACE_MAGIC_IDX] = BOOT_TRACE_MAGIC;
+    }
 
     printf("\r\n*** HARD FAULT ***\r\n");
     printf("MCAUSE  = 0x%08lx\r\n", (unsigned long)u32Mcause);
