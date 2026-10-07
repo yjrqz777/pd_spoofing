@@ -50,7 +50,8 @@
 				"excludeResources": [
 					"${project}/tools",
 					"${project}/doc",
-					"${project}/Code/UserBsp/bsp_lcd.c"
+					"${project}/Code/UserBsp/bsp_lcd.c",
+					"${project}/Code/UserDev/pdsink"
 				],
 				"optimization": {
 					"level": "size",
