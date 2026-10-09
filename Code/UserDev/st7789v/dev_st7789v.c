@@ -422,7 +422,7 @@ void DevSt7789vInit(void)
        顺序不能反：两块都排进同一帧后 Show() 才会开始发送，
        否则底色会把图片盖掉。 */
 	(void)DevSt7789vFillScreenStart(COLOR_MAGENTA);
-    (void)DevSt7789vShowImg(gau8ImgXjBw[0]);
+    // (void)DevSt7789vShowImg(gau8ImgXjBw[0]);
     (void)DevSt7789vShow();
     // DevSt7789vFillRect(ST7789V_RED);
 	// DevSt7789vDrawPoint(5, 5, ST7789V_BLUE);

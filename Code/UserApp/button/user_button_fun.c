@@ -14,24 +14,27 @@
 #include <stdio.h>
 #include "user_button.h"
 #include "UserApp/user_system.h"
+#include "UserApp/user_pd.h"
 
 static uint8_t i = 0;
 void UsrButtonPdInc(void)
 {
     log_info("UsrButtonPdInc");
-    BspGpioSetVout(0);
+    UserPdOutputOff();
+    UserPdNextPdo();                        /* 目标档位往上，调压期间保持输出 */
 }
 
 void UsrButtonPdDec(void)
 {
     log_info("UsrButtonPdDec");
-    BspGpioSetVout(0);
+    UserPdOutputOff();
+    UserPdPrevPdo();                        /* 目标档位往下，调压期间保持输出 */
 }
 
 void UsrButtonPdON(void)
 {
     log_info("UsrButtonPdON");
-    BspGpioSetVout(0);
+    UserPdOutputOff();                      /* 断输出 */
     if (tSysData.eState < E_SYSTEM_OFF)
     {
         return;
@@ -60,7 +63,7 @@ void UserButtonPowerOn(void)
     log_info("UsrButton Power ON %d", i);
     if (i++ > 3000 / DEV_BTN_HOLD_UPDATA)
     {
-        BspGpioSetVout(1);
+        UserPdOutputOn();                   /* 先请求输出，收到 PS_RDY 后由 PD 层导通 VOUT */
         i = 0;
     }
 }
@@ -70,4 +73,3 @@ void UserButtonPowerOnUp(void)
     i = 0;
     log_info("UsrButton Power Up %d", i);
 }
-

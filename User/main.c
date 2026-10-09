@@ -23,6 +23,7 @@
 #include "UserApp/user_system.h"
 #include "UserApp/user_display.h"
 #include "UserApp/user_sensor.h"
+#include "UserApp/user_pd.h"
 #include "UserApp/button/user_button.h"
 
 
@@ -85,7 +86,8 @@ static void System_Init(void)
     printf("SYSCLK=%lu Hz ChipID=%08lx\r\n",
            (unsigned long)SystemCoreClock, (unsigned long)DBGMCU_GetCHIPID());
     printf("\rby:YJRQZ777\r\n");
-    
+
+    System_PrintResetReason();
 }
 /**
  * @brief  初始化
@@ -98,6 +100,7 @@ static void User_Init(void)
 
     BspIwdgInit(IWDG_Prescaler_32, 4000);   // 2.7s IWDG reset
     BspGpioInit();
+    BspGpioSetVout(0u);                     /* 上电不带后级负载；输出要等用户长按 KEY3 触发 */
     BspTimeInit();
     BspWs2812Init();
     BspAdcInit();
@@ -140,6 +143,7 @@ int main(void)
         PT_TASK_REG(3, UserDisplayTask);
         PT_TASK_REG(4, UsrButtonTask);
         PT_TASK_REG(5, DevSt7789vTask);
+        PT_TASK_REG(6, UserPdTask);
         
     }
 }

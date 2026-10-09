@@ -145,8 +145,8 @@ def build_font(ttf_path, pixel_size, chars):
             }
         )
 
-    # 数字统一前进宽度：取所有数字的最大自然宽度，并把墨迹在该宽度内居中，
-    # 这样 "12.08" 与 "9.99" 这类字符串的总宽度只由字符数决定。
+    # 数字统一前进宽度：取所有数字的最大自然宽度，并把墨迹在该宽度内居中。
+    # 空格也使用同一前进宽度，使 printf 的字段宽度占位能完整覆盖旧数字。
     digit_advances = [g["advance"] for g in glyphs if g["char"] in UNIFORM_ADVANCE_CHARS]
     if digit_advances:
         uniform = max(digit_advances)
@@ -154,6 +154,8 @@ def build_font(ttf_path, pixel_size, chars):
             if g["char"] in UNIFORM_ADVANCE_CHARS and g["width"] > 0:
                 g["advance"] = uniform
                 g["x_offset"] = (uniform - g["width"]) // 2
+            elif g["char"] == " ":
+                g["advance"] = uniform
 
     line_height = ascent + descent
     return glyphs, ascent, line_height

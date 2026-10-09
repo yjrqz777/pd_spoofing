@@ -23,8 +23,9 @@ extern void UserButtonPowerOnUp(void);
  */
 void UsrButtonRegisterDefault(void)
 {
-    (void)DevButtonRegister(E_BSP_KEY_1,               E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdInc);
-    (void)DevButtonRegister(E_BSP_KEY_2,               E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdDec);
+    /* KEY-1 往下换档（减），KEY-2 往上换档（加）；KEY-3 管输出通断 */
+    (void)DevButtonRegister(E_BSP_KEY_1,               E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdDec);
+    (void)DevButtonRegister(E_BSP_KEY_2,               E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdInc);
     (void)DevButtonRegister(E_BSP_KEY_3,               E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdON);
     (void)DevButtonRegister(E_BSP_KEY_1 | E_BSP_KEY_2, E_DEV_BTN_SINGLE_CLICK,  UsrButtonPdTest);
     (void)DevButtonRegister(E_BSP_KEY_3,               E_DEV_BTN_LONG_HOLD,     UserButtonPowerOn);

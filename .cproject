@@ -264,7 +264,7 @@
             </toolChain>
           </folderInfo>
           <sourceEntries>
-            <entry excluding="tools|doc|Code/UserBsp/bsp_lcd.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+            <entry excluding="tools|doc|Code/UserBsp/bsp_lcd.c|Code/UserDev/pdsink" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
           </sourceEntries>
         </configuration>
       </storageModule>

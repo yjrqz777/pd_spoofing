@@ -190,11 +190,9 @@ char *StrAddUnit(char *p, const char *unit, uint8_t len)
 }
 
 
-
 void DisplayRun(void)
 {
     static char string[4][9];
-    static uint16_t u16colcor = 0;
 
     if (u8RunFg == 1)
     {
@@ -207,26 +205,20 @@ void DisplayRun(void)
         return;
     }
 
+    /* 最小字段宽度 5：10.00 保持原样，8.00 前补一个等宽空格。
+       28px 字库把空格 advance 设成与数字一致的 19px，因此短值也会刷新
+       旧值多出来的首位区域，不需要额外清屏。 */
+    sprintf(string[0],"%5.2fV",DevSensorGetValue(E_DEV_VBUS));
+    sprintf(string[1],"%5.2fV",DevSensorGetValue(E_DEV_VOUT));
+    sprintf(string[2],"%5.2fA",DevSensorGetValue(E_DEV_IBUS));
+    sprintf(string[3],"%5.2fW",DevSensorGetValue(E_DEV_POW));
 
-    
-    // sprintf(string,"%0.2f",i+=0.01);
-    // ColorHsvToRgb(u16colcor++, 255, 20, &u8Red, &u8Green, &u8Blue);
-    // DevWs2812SetPixel(0, u8Red, u8Green, u8Blue );
-
-    sprintf(string[0],"%0.2f",DevSensorGetValue(E_DEV_VBUS));
-    sprintf(string[1],"%0.2f",DevSensorGetValue(E_DEV_VOUT));
-    sprintf(string[2],"%0.2f",DevSensorGetValue(E_DEV_IBUS));
-    sprintf(string[3],"%0.2f",DevSensorGetValue(E_DEV_POW));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3-MID_OFFSET,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[0],"V",2));
-    (void)DevSt7789vDrawText(ST7789V_WIDTH/2,   ST7789V_HEIGHT/3-MID_OFFSET,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   StrAddUnit(string[1],"V",2));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3*2-MID_OFFSET, &gtFontInter28, COLOR_WHITE, COLOR_GREEN, StrAddUnit(string[2],"A",2));
-    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT-MID_OFFSET,     &gtFontInter28, COLOR_WHITE, COLOR_BLUE,  StrAddUnit(string[3],"W",2));
-
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3-MID_OFFSET,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   string[0]);
+    (void)DevSt7789vDrawText(ST7789V_WIDTH/2,   ST7789V_HEIGHT/3-MID_OFFSET,   &gtFontInter28, COLOR_WHITE, COLOR_RED,   string[1]);
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT/3*2-MID_OFFSET, &gtFontInter28, COLOR_WHITE, COLOR_GREEN, string[2]);
+    (void)DevSt7789vDrawText(0,                 ST7789V_HEIGHT-MID_OFFSET,     &gtFontInter28, COLOR_WHITE, COLOR_BLUE,  string[3]);
 
     BspGpioSetLed(BspGpioReadVoutFg());
-
-
-
 }
 
 
