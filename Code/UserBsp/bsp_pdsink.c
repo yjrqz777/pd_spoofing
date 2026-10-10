@@ -46,6 +46,30 @@ static void BspPdRxMode(void)
 
     NVIC_EnableIRQ(USBPD_IRQn);                     /* 允许 PD 中断 */
 }
+static void BspPdTxMode(void)
+{
+    /* 正在通信的那一路 CC 拉低，避免对端把它当空闲 */
+    if ((USBPD->CONFIG & CC_SEL) != 0u)
+    {
+        USBPD->PORT_CC2 |= CC_LVE;                  /* CC_SEL = 1：当前走 CC2 */
+    }
+    else
+    {
+        USBPD->PORT_CC1 |= CC_LVE;                  /* CC_SEL = 0：当前走 CC1 */
+    }
+
+    USBPD->BMC_CLK_CNT = UPD_TMR_TX_48M;            /* BMC 位时序：48MHz 下的发送定时值 */
+    USBPD->CONTROL    |= PD_TX_EN;                  /* 收发方向切到"发" */
+    USBPD->STATUS     &= BMC_AUX_INVALID;           /* 清掉上一次的 SOP 类型残留 */
+    USBPD->CONTROL    |= BMC_START;                 /* 启动 BMC 状态机，开始发 */
+}
+
+/** @brief SINK 模式：CC 比较器阈值 0.66V，下拉打开（与官方例程/旧工程一致） */
+static void BspPdSinkInit(void)
+{
+    USBPD->PORT_CC1 = CC_CMP_66 | CC_PD;
+    USBPD->PORT_CC2 = CC_CMP_66 | CC_PD;
+}
 
 /**
  * @brief  中断里用的短延时
@@ -85,32 +109,14 @@ static void BspPdTxStart(const uint8_t *pu8Data, uint8_t u8Len, uint8_t u8Sop)
         tBuf.au8Tx[i] = pu8Data[i];
     }
 
-    /* 正在通信的那一路 CC 拉低，避免对端把它当空闲 */
-    if ((USBPD->CONFIG & CC_SEL) != 0u)
-    {
-        USBPD->PORT_CC2 |= CC_LVE;                  /* CC_SEL = 1：当前走 CC2 */
-    }
-    else
-    {
-        USBPD->PORT_CC1 |= CC_LVE;                  /* CC_SEL = 0：当前走 CC1 */
-    }
-
-    USBPD->BMC_CLK_CNT = UPD_TMR_TX_48M;            /* BMC 位时序：48MHz 下的发送定时值 */
+    BspPdTxMode();
     USBPD->DMA         = (uint32_t)(uint8_t *)tBuf.au8Tx;   /* 发送缓冲地址，硬件从这儿取字节 */
     USBPD->TX_SEL      = u8Sop;                     /* 前置码类型：UPD_SOP0 = 普通报文 */
     USBPD->BMC_TX_SZ   = u8Len;                     /* 要发几个字节 */
-    USBPD->CONTROL    |= PD_TX_EN;                  /* 收发方向切到"发" */
-    USBPD->STATUS     &= BMC_AUX_INVALID;           /* 清掉上一次的 SOP 类型残留 */
-    USBPD->CONTROL    |= BMC_START;                 /* 启动 BMC 状态机，开始发 */
 }
 
 
-/** @brief SINK 模式：CC 比较器阈值 0.66V，下拉打开（与官方例程/旧工程一致） */
-static void BspPdSinkInit(void)
-{
-    USBPD->PORT_CC1 = CC_CMP_66 | CC_PD;
-    USBPD->PORT_CC2 = CC_CMP_66 | CC_PD;
-}
+
 /* ---- 中断服务函数 ---- */
 
 void USBPD_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
