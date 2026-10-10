@@ -21,9 +21,9 @@
  *  @note  可调档（PPS）不进 atPdo，只把"有没有"记在 u8HasPps 里。 */
 typedef struct
 {
-    tDevPdPdoDef atPdo[DEV_PD_PDO_MAX];      /* 解析出来的固定档表 */
-    tDevPdPdoDef atPdoOld[DEV_PD_PDO_MAX];   /* 上一份，和这一份比对 */
-    uint32_t     au32Raw[DEV_PD_PDO_MAX];    /* 能力报文原始 32 位字（诊断用） */
+    tDevPdPdoDef tPdo[DEV_PD_PDO_MAX];      /* 解析出来的固定档表 */
+    tDevPdPdoDef tPdoOld[DEV_PD_PDO_MAX];   /* 上一份，和这一份比对 */
+    uint32_t     u32Raw[DEV_PD_PDO_MAX];    /* 能力报文原始 32 位字（诊断用） */
     uint8_t      u8Count;                    /* 表里有几档 */
     uint8_t      u8CountOld;                 /* 上一份有几档 */
     uint8_t      u8HasPps;                   /* 1 = 报文里有可调档 */
@@ -34,6 +34,7 @@ typedef struct
 /** @brief 协商状态：走到哪一步、要哪一档、超时与失败计数 */
 typedef struct
 {
+    uint8_t        u8Connected;          /* 1 = CC 上确认有连接 */
     eDevPdStateDef eState;        /* 协商状态 */
     uint8_t        u8ActiveIndex; /* 生效档位在报文里的序号，0xFF = 还没有 */
     uint16_t       u16ActiveMv;   /* 生效电压（mV） */
@@ -44,30 +45,21 @@ typedef struct
     uint8_t        u8ErrCnt;      /* 本轮失败次数 */
 } tDevPdLinkDef;
 
-/** @brief 连接检测：CC 上有没有源端、检测分频与防抖计数 */
-typedef struct
-{
-    uint8_t u8Connected;          /* 1 = CC 上确认有连接 */
-    uint8_t u8DetDiv;             /* 检测分频计数 */
-    uint8_t u8DetCnt;             /* 连续确认计数 */
-} tDevPdDetDef;
-
 /** @brief 收发缓冲 */
 typedef struct
 {
-    uint8_t au8Rx[BSP_PD_FRAME_MAX];   /* 收帧缓冲，从 BSP 取过来 */
-    uint8_t au8Tx[6];                  /* 发帧缓冲：2 字节头 + 最多 1 个数据对象 */
+    uint8_t u8Rx[BSP_PD_FRAME_MAX];   /* 收帧缓冲，从 BSP 取过来 */
+    uint8_t u8Tx[6];                  /* 发帧缓冲：2 字节头 + 最多 1 个数据对象 */
 } tDevPdBufDef;
 
 static tDevPdCapDef  tCap;    /* 能力报文与档位表 */
 static tDevPdLinkDef tLink;   /* 协商状态 */
-static tDevPdDetDef  tDet;    /* 连接检测 */
 static tDevPdBufDef  tBuf;    /* 收发缓冲 */
 
 /* ---- 内部：组报文 ---- */
 
 /**
- * @brief  组报文头，放在 tBuf.au8Tx[0..1]
+ * @brief  组报文头，放在 tBuf.u8Tx[0..1]
  * @param[in] u8Ext     1 = 扩展报文
  * @param[in] u8MsgType 消息类型，占 bit[4:0]
  * @note   协议版本写 01 = PD2.0；电源角色和数据角色都写 0（SINK / UFP）；
@@ -75,13 +67,13 @@ static tDevPdBufDef  tBuf;    /* 收发缓冲 */
  */
 static void PdLoadHeader(uint8_t u8Ext, uint8_t u8MsgType)
 {
-    tBuf.au8Tx[0] = (uint8_t)(u8MsgType & 0x1Fu);
-    tBuf.au8Tx[0] |= 0x40u;                              /* bit[7:6] = 01，PD2.0 */
+    tBuf.u8Tx[0] = (uint8_t)(u8MsgType & 0x1Fu);
+    tBuf.u8Tx[0] |= 0x40u;                              /* bit[7:6] = 01，PD2.0 */
 
-    tBuf.au8Tx[1] = (uint8_t)(tLink.u8MsgId << 1);             /* bit[3:1] 消息 ID */
+    tBuf.u8Tx[1] = (uint8_t)(tLink.u8MsgId << 1);             /* bit[3:1] 消息 ID */
     if (u8Ext != 0u)
     {
-        tBuf.au8Tx[1] |= 0x80u;                          /* bit15 扩展报文 */
+        tBuf.u8Tx[1] |= 0x80u;                          /* bit15 扩展报文 */
     }
 }
 
@@ -95,15 +87,15 @@ static void PdLoadHeader(uint8_t u8Ext, uint8_t u8MsgType)
  */
 static eStatusDef PdSend(uint8_t u8DataLen)
 {
-    tBuf.au8Tx[1] |= (uint8_t)((u8DataLen / 4u) << 4);   /* bit[6:4] 数据对象个数 */
+    tBuf.u8Tx[1] |= (uint8_t)((u8DataLen / 4u) << 4);   /* bit[6:4] 数据对象个数 */
 
-    if (BspPdSend(tBuf.au8Tx, (uint8_t)(2u + u8DataLen)) == E_OK)
+    if (BspPdSend(tBuf.u8Tx, (uint8_t)(2u + u8DataLen)) == E_OK)
     {
         tLink.u8MsgId = (uint8_t)((tLink.u8MsgId + 1u) & 0x07u);
         return E_OK;
     }
 
-    log_warn("PD tx failed, type %u", (unsigned)(tBuf.au8Tx[0] & 0x1Fu));   /* 对端没回 GoodCRC */
+    log_warn("PD tx failed, type %u", (unsigned)(tBuf.u8Tx[0] & 0x1Fu));   /* 对端没回 GoodCRC */
     return E_ERROR;
 }
 
@@ -176,7 +168,7 @@ static uint8_t PdSaveSrcCap(uint8_t u8Len)
     uint8_t u8Changed;
     uint8_t i;
 
-    u8Ndo = (uint8_t)((tBuf.au8Rx[1] >> 4) & 0x07u);     /* 报文头 bit[14:12] 数据对象个数 */
+    u8Ndo = (uint8_t)((tBuf.u8Rx[1] >> 4) & 0x07u);     /* 报文头 bit[14:12] 数据对象个数 */
     if (u8Ndo == 0u)
     {
         tCap.u8Count = 0u;
@@ -198,8 +190,8 @@ static uint8_t PdSaveSrcCap(uint8_t u8Len)
 
     for (i = 0u; i < u8Ndo; i++)
     {
-        tCap.au32Raw[i] = PdPdoRaw(&tBuf.au8Rx[2], (uint8_t)(i + 1u));
-        PdPdoParse((uint8_t)(i + 1u), &tBuf.au8Rx[2], &tPdo);
+        tCap.u32Raw[i] = PdPdoRaw(&tBuf.u8Rx[2], (uint8_t)(i + 1u));
+        PdPdoParse((uint8_t)(i + 1u), &tBuf.u8Rx[2], &tPdo);
 
         if (tPdo.eType == E_DEV_PD_PDO_APDO)
         {
@@ -209,7 +201,7 @@ static uint8_t PdSaveSrcCap(uint8_t u8Len)
 
         if (tCap.u8Count < (uint8_t)DEV_PD_PDO_MAX)
         {
-            tCap.atPdo[tCap.u8Count] = tPdo;
+            tCap.tPdo[tCap.u8Count] = tPdo;
             tCap.u8Count++;
         }
     }
@@ -219,14 +211,14 @@ static uint8_t PdSaveSrcCap(uint8_t u8Len)
     {
         u8Changed = 1u;
     }
-    else if (memcmp(tCap.atPdo, tCap.atPdoOld, (uint16_t)tCap.u8Count * sizeof(tDevPdPdoDef)) != 0)
+    else if (memcmp(tCap.tPdo, tCap.tPdoOld, (uint16_t)tCap.u8Count * sizeof(tDevPdPdoDef)) != 0)
     {
         u8Changed = 1u;
     }
 
     if (u8Changed != 0u)                            /* 变了才更新基准 */
     {
-        memcpy(tCap.atPdoOld, tCap.atPdo, sizeof(tCap.atPdo));
+        memcpy(tCap.tPdoOld, tCap.tPdo, sizeof(tCap.tPdo));
         tCap.u8CountOld = tCap.u8Count;
         tCap.u8HasPpsOld   = tCap.u8HasPps;
     }
@@ -239,7 +231,7 @@ static void PdTryRequest(void);
 /** @brief 处理一条收到的报文 */
 static void PdHandleMsg(uint8_t u8Len)
 {
-    uint8_t u8Type = (uint8_t)(tBuf.au8Rx[0] & 0x1Fu);   /* bit[4:0] 消息类型 */
+    uint8_t u8Type = (uint8_t)(tBuf.u8Rx[0] & 0x1Fu);   /* bit[4:0] 消息类型 */
     uint8_t u8Changed;
     uint8_t i;
 
@@ -261,7 +253,7 @@ static void PdHandleMsg(uint8_t u8Len)
                      - 任何打印都放在发送之后，日志一行就要几毫秒，放前面会吃掉整个窗口。 */
                 if (tLink.u8PendIndex == 0u)
                 {
-                    tLink.u8PendIndex = tCap.atPdo[0].u8PdoIndex;
+                    tLink.u8PendIndex = tCap.tPdo[0].u8PdoIndex;
                 }
                 PdTryRequest();
 
@@ -285,7 +277,7 @@ static void PdHandleMsg(uint8_t u8Len)
                     for (u8Idx = 0u; u8Idx < tCap.u8RawCount; u8Idx++)
                     {
                         u8Pos = (uint8_t)(u8Pos + (uint8_t)sprintf(&acRaw[u8Pos], "%08lX ",
-                                                                   (unsigned long)tCap.au32Raw[u8Idx]));
+                                                                   (unsigned long)tCap.u32Raw[u8Idx]));
                     }
                     acRaw[u8Pos] = '\0';
                     log_info("PD srccap raw %s", acRaw);
@@ -310,16 +302,16 @@ static void PdHandleMsg(uint8_t u8Len)
             {
                 tLink.eState = E_DEV_PD_READY;
                 tLink.u8ActiveIndex = tLink.u8ReqIndex;
-                tLink.u16ActiveMv = tCap.atPdo[tLink.u8ReqIndex - 1u].u16MinVoltageMv;
+                tLink.u16ActiveMv = tCap.tPdo[tLink.u8ReqIndex - 1u].u16MinVoltageMv;
                 tLink.u8PendIndex = 0u;
 
                 /* 档位表放在契约成立后再打：协商关键窗口内的每一毫秒都要留给报文 */
                 for (i = 0u; i < tCap.u8Count; i++)
                 {
                     log_info("  pdo %u: %u mV, %u mA",
-                             (unsigned)tCap.atPdo[i].u8PdoIndex,
-                             (unsigned)tCap.atPdo[i].u16MinVoltageMv,
-                             (unsigned)tCap.atPdo[i].u16MaxCurrentMa);
+                             (unsigned)tCap.tPdo[i].u8PdoIndex,
+                             (unsigned)tCap.tPdo[i].u16MinVoltageMv,
+                             (unsigned)tCap.tPdo[i].u16MaxCurrentMa);
                 }
             }
             break;
@@ -374,9 +366,9 @@ static void PdTryRequest(void)
 
     for (i = 0u; i < tCap.u8Count; i++)               /* 序号必须在解析出来的表里 */
     {
-        if (tCap.atPdo[i].u8PdoIndex == tLink.u8PendIndex)
+        if (tCap.tPdo[i].u8PdoIndex == tLink.u8PendIndex)
         {
-            ptPdo = &tCap.atPdo[i];
+            ptPdo = &tCap.tPdo[i];
             break;
         }
     }
@@ -397,10 +389,10 @@ static void PdTryRequest(void)
     u32Rdo |= (((uint32_t)u16Current & 0x3FFu) << 10);
 
     PdLoadHeader(0u, DEF_TYPE_REQUEST);
-    tBuf.au8Tx[2] = (uint8_t)(u32Rdo & 0xFFu);           /* 数据对象小端 */
-    tBuf.au8Tx[3] = (uint8_t)((u32Rdo >> 8) & 0xFFu);
-    tBuf.au8Tx[4] = (uint8_t)((u32Rdo >> 16) & 0xFFu);
-    tBuf.au8Tx[5] = (uint8_t)((u32Rdo >> 24) & 0xFFu);
+    tBuf.u8Tx[2] = (uint8_t)(u32Rdo & 0xFFu);           /* 数据对象小端 */
+    tBuf.u8Tx[3] = (uint8_t)((u32Rdo >> 8) & 0xFFu);
+    tBuf.u8Tx[4] = (uint8_t)((u32Rdo >> 16) & 0xFFu);
+    tBuf.u8Tx[5] = (uint8_t)((u32Rdo >> 24) & 0xFFu);
 
     /* 先把 Request 发出去，再打日志：这几毫秒属于源端的响应窗口，不能花在串口上 */
     eStatus = PdSend(4u);
@@ -408,9 +400,9 @@ static void PdTryRequest(void)
     log_info("PD request pdo%u %umA rdo=%08lX tx=%02X %02X %02X %02X %02X %02X %s",
              (unsigned)tLink.u8PendIndex, (unsigned)ptPdo->u16MaxCurrentMa,
              (unsigned long)u32Rdo,
-             (unsigned)tBuf.au8Tx[0], (unsigned)tBuf.au8Tx[1],
-             (unsigned)tBuf.au8Tx[2], (unsigned)tBuf.au8Tx[3],
-             (unsigned)tBuf.au8Tx[4], (unsigned)tBuf.au8Tx[5],
+             (unsigned)tBuf.u8Tx[0], (unsigned)tBuf.u8Tx[1],
+             (unsigned)tBuf.u8Tx[2], (unsigned)tBuf.u8Tx[3],
+             (unsigned)tBuf.u8Tx[4], (unsigned)tBuf.u8Tx[5],
              (eStatus == E_OK) ? "ok" : "no GoodCRC");
 
     if (eStatus == E_OK)
@@ -445,20 +437,73 @@ void DevPdInit(void)
 
     tCap.u8Count        = 0u;
 
-    tDet.u8Connected    = 0u;
-    tDet.u8DetDiv       = 0u;
-    tDet.u8DetCnt       = 0u;
-
     BspPdPhyInit();                                 /* PHY 的初始化由本层负责 */
 }
+
+
+
+
+
+static void DevPdDetectCc(void)
+{
+    uint8_t u8Which;
+    static uint8_t u8TimeCount = 0u;
+    static uint8_t u8DetCnt = 0u;
+    if (++ u8TimeCount < DEV_PD_DET_DIV)
+    {
+        return;
+    }
+    u8TimeCount = 0u;
+
+    u8Which = BspPdDetectCc();
+    if (u8Which == 0u)
+    {
+        u8DetCnt = 0u;
+        if (tLink.u8Connected != 0u)                  /* 拔掉了 */
+        {
+            tLink.u8Connected    = 0u;
+            tLink.u8ActiveIndex = 0xFFu;
+            tLink.u16ActiveMv   = 0u;
+            tLink.eState        = E_DEV_PD_IDLE;
+            BspPdPhyReset();
+        }
+        return;
+    }
+
+    if (tLink.u8Connected != 0u)
+    {
+        BspPdSelectCc(u8Which);             /* 检测动过 CC 配置，恢复回通信用的那套 */
+        return;                             /* 已经连上了，不再重复确认 */
+    }
+
+    if (++u8DetCnt >= (uint8_t)DEV_PD_DET_CONFIRM)
+    {
+        BspPdSelectCc(u8Which);         /* 定下走哪一路 CC */
+        tLink.u8Connected   = 1u;
+        tCap.u8Count    = 0u;
+        tLink.u8ActiveIndex = 0xFFu;
+        tLink.u16ActiveMv   = 0u;
+        tLink.u8PendIndex   = 0u;
+        tLink.u8ErrCnt      = 0u;
+        tLink.u16Timer      = 0u;
+        tLink.eState        = E_DEV_PD_WAIT_SRC_CAP;
+    }
+}
+
+
+
+
+
+
+
+
 
 void DevPdService(void)
 {
     uint8_t u8Len = 0u;
-    uint8_t u8Which;
 
     /* 1) 有帧就取走处理 */
-    if (BspPdTakeRx(tBuf.au8Rx, (uint8_t)sizeof(tBuf.au8Rx), &u8Len) == E_OK)
+    if (BspPdTakeRx(tBuf.u8Rx, (uint8_t)sizeof(tBuf.u8Rx), &u8Len) == E_OK)
     {
         PdHandleMsg(u8Len);
     }
@@ -510,55 +555,9 @@ void DevPdService(void)
 
     /* 3) 该发请求就发 */
     PdTryRequest();
+        /* 4) 检测 CC 线状态，处理插拔 */
+    DevPdDetectCc();
 
-    /* 4) 连接检测：没插上时勤查（快点连上），插上后低频查（只为发现拔线）。
-     *    检测会改动 CC 的比较器配置，所以插上时每次查完都要恢复回去。 */
-    tDet.u8DetDiv++;
-    if (tDet.u8DetDiv >= ((tDet.u8Connected == 0u) ? (uint8_t)DEV_PD_DET_DIV : (uint8_t)DEV_PD_DET_LINK))
-    {
-        tDet.u8DetDiv = 0u;
-        u8Which = BspPdDetectCc();
-
-        if (u8Which != 0u)
-        {
-            if (tDet.u8Connected == 0u)
-            {
-                if (tDet.u8DetCnt < (uint8_t)DEV_PD_DET_CONFIRM)
-                {
-                    tDet.u8DetCnt++;
-                }
-
-                if (tDet.u8DetCnt >= (uint8_t)DEV_PD_DET_CONFIRM)
-                {
-                    BspPdSelectCc(u8Which);         /* 定下走哪一路 CC */
-                    tDet.u8Connected   = 1u;
-                    tCap.u8Count    = 0u;
-                    tLink.u8ActiveIndex = 0xFFu;
-                    tLink.u16ActiveMv   = 0u;
-                    tLink.u8PendIndex   = 0u;
-                    tLink.u8ErrCnt      = 0u;
-                    tLink.u16Timer      = 0u;
-                    tLink.eState        = E_DEV_PD_WAIT_SRC_CAP;
-                }
-            }
-            else
-            {
-                BspPdSelectCc(u8Which);             /* 检测动过 CC 配置，恢复回通信用的那套 */
-            }
-        }
-        else
-        {
-            tDet.u8DetCnt = 0u;
-            if (tDet.u8Connected != 0u)                  /* 拔掉了 */
-            {
-                tDet.u8Connected    = 0u;
-                tLink.u8ActiveIndex = 0xFFu;
-                tLink.u16ActiveMv   = 0u;
-                tLink.eState        = E_DEV_PD_IDLE;
-                BspPdPhyReset();
-            }
-        }
-    }
 }
 
 eStatusDef DevPdRequestPdo(uint8_t u8PdoIndex)
@@ -569,14 +568,14 @@ eStatusDef DevPdRequestPdo(uint8_t u8PdoIndex)
     {
         return E_ERROR;
     }
-    if (tDet.u8Connected == 0u)
+    if (tLink.u8Connected == 0u)
     {
         return E_ERROR;
     }
 
     for (i = 0u; i < tCap.u8Count; i++)               /* 必须是已经解析到的档位 */
     {
-        if (tCap.atPdo[i].u8PdoIndex == u8PdoIndex)
+        if (tCap.tPdo[i].u8PdoIndex == u8PdoIndex)
         {
             tLink.u8PendIndex = u8PdoIndex;               /* 记下来，由 DevPdService 发出去 */
             return E_OK;
@@ -598,7 +597,7 @@ void DevPdRestart(void)
     tLink.u16Timer      = 0u;
     tLink.u8ActiveIndex = 0xFFu;
     tLink.u16ActiveMv   = 0u;
-    tLink.eState        = (tDet.u8Connected != 0u) ? E_DEV_PD_WAIT_SRC_CAP : E_DEV_PD_IDLE;
+    tLink.eState        = (tLink.u8Connected != 0u) ? E_DEV_PD_WAIT_SRC_CAP : E_DEV_PD_IDLE;
 
     BspPdPhyReset();
 }
@@ -624,7 +623,7 @@ const tDevPdPdoDef *DevPdGetPdo(uint8_t u8Index)
     {
         return 0;
     }
-    return &tCap.atPdo[u8Index];
+    return &tCap.tPdo[u8Index];
 }
 
 uint8_t DevPdGetActiveIndex(void)
@@ -639,5 +638,5 @@ uint16_t DevPdGetActiveMv(void)
 
 uint8_t DevPdIsConnected(void)
 {
-    return tDet.u8Connected;
+    return tLink.u8Connected;
 }
