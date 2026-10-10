@@ -228,25 +228,21 @@ void BspPdPhyReset(void)
 uint8_t BspPdDetectCc(void)
 {
     uint8_t u8Ret = 0u;
+    USBPD->PORT_CC2 &= ~(CC_CMP_Mask | PA_CC_AI);
+    USBPD->PORT_CC2 |= CC_CMP_22;
 
     USBPD->PORT_CC1 &= ~(CC_CMP_Mask | PA_CC_AI);   /* 先清掉阈值位和模拟输入位 */
     USBPD->PORT_CC1 |= CC_CMP_22;                   /* 阈值切到 0.22V：源端的上拉会把它顶过去 */
-    Delay_Us(2);                                    /* 等比较器稳定 */
+
+    // Delay_Us(2);
+    if ((USBPD->PORT_CC2 & PA_CC_AI) != 0u)
+    {
+        u8Ret = 2u;                             /* 只有 CC2 有 */
+    }
+    /* 两路都有：有些 A-to-C 线两路都带上拉，按 CC1 处理，跟例程一致 */
     if ((USBPD->PORT_CC1 & PA_CC_AI) != 0u)         /* PA_CC_AI = 比较器输出电平 */
     {
         u8Ret = 1u;                                 /* CC1 上有源端 */
-    }
-
-    USBPD->PORT_CC2 &= ~(CC_CMP_Mask | PA_CC_AI);
-    USBPD->PORT_CC2 |= CC_CMP_22;
-    Delay_Us(2);
-    if ((USBPD->PORT_CC2 & PA_CC_AI) != 0u)
-    {
-        if (u8Ret == 0u)
-        {
-            u8Ret = 2u;                             /* 只有 CC2 有 */
-        }
-        /* 两路都有：有些 A-to-C 线两路都带上拉，按 CC1 处理，跟例程一致 */
     }
 
     return u8Ret;
