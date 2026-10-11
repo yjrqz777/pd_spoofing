@@ -73,6 +73,7 @@
 #define COLOR_RED            (uint16_t)0xF800   /* 纯红   #FF0000 */
 #define COLOR_MAGENTA        (uint16_t)0xF81F   /* 品红   #FF00FF */
 #define COLOR_GREEN          (uint16_t)0x07E0   /* 纯绿   #00FF00 */
+#define COLOR_GREEN_LITE     (uint16_t)0x61F8   /* 浅绿   #61f861 */
 #define COLOR_CYAN           (uint16_t)0x7FFF   /* 浅青   #7BFFFF  比标准青亮一档 */
 #define COLOR_YELLOW         (uint16_t)0xFFE0   /* 纯黄   #FFFF00 */
 #define COLOR_BROWN          (uint16_t)0XBC40   /* 棕     #BD8600 */

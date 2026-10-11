@@ -1,6 +1,7 @@
 #include "user_display.h"
 
 #include "Components/color/color.h"
+#include "UserBsp/bsp_ws2812.h"
 #include "UserDev/ws2812/dev_ws2812.h"
 #include "UserDev/st7789v/dev_st7789v.h"
 #include "UserDev/sensor/dev_sensor.h"
@@ -93,6 +94,27 @@ void DisplayFlow(void)
     /* 帧缓冲每拍都被清空重画，所以每个周期都要把当前应亮的灯重新写一遍 */
     index = (uint8_t)(_0000_0001 << u8i);
     index |= (uint8_t)(((_0000_0001 << u8LatchNum) - 1) << (4 - u8LatchNum));   /* 已锁存的灯，从第 3 个往回 */
+    DevWs2812SetMask(index, u8Red, u8Green, u8Blue);
+}
+
+
+/* RUN 页输出有效时的 WS2812 指示：单点从第 3 个往第 0 个反向循环流动，不锁存、不停 */
+static void DisplayRunFlow(void)
+{
+    static uint16_t timeCount = 0;
+    static uint8_t u8i = 3;                 /* 点当前所在的灯：反向 3,2,1,0 循环 */
+    uint8_t index;
+
+    ColorHsvToRgb(DISPLAY_HUE_GREEN, 255, 20, &u8Red, &u8Green, &u8Blue);
+
+    if (++timeCount >= 150 / DISPLAY_TASK_MS)
+    {
+        timeCount = 0;
+        u8i = (uint8_t)((u8i + WS2812_PIXEL_NUM - 1u) % WS2812_PIXEL_NUM);
+    }
+
+    /* 帧缓冲每拍都被清空重画，所以每个周期都要把当前应亮的灯重新写一遍 */
+    index = (uint8_t)(_0000_0001 << u8i);
     DevWs2812SetMask(index, u8Red, u8Green, u8Blue);
 }
 
@@ -194,6 +216,18 @@ void DisplayRun(void)
 {
     static char string[4][9];
 
+    /* 灯色先填、再判切换标志：切页那几拍会提前 return，不能让它把循环开头清成黑的帧发出去 */
+    if (BspGpioReadVoutFg() != 0u)
+    {
+        /* 输出有效：四个灯流水 */
+        DisplayRunFlow();
+    }
+    else
+    {
+        ColorHsvToRgb(DISPLAY_HUE_GREEN, 255, 20, &u8Red, &u8Green, &u8Blue);
+        DevWs2812Fill(u8Red, u8Green, u8Blue);
+    }
+
     if (u8RunFg == 1)
     {
         log_info("DisplayRun: run fg=%d", u8RunFg);
@@ -204,7 +238,6 @@ void DisplayRun(void)
         }
         return;
     }
-
     /* 最小字段宽度 5：10.00 保持原样，8.00 前补一个等宽空格。
        28px 字库把空格 advance 设成与数字一致的 19px，因此短值也会刷新
        旧值多出来的首位区域，不需要额外清屏。 */
