@@ -71,25 +71,7 @@ static void BspPdSinkInit(void)
     USBPD->PORT_CC2 = CC_CMP_66 | CC_PD;
 }
 
-/**
- * @brief  中断里用的短延时
- * @param[in] u32Us 微秒数
- * @note   Delay_Us() 会改写 SysTick->CMP 并启停 SysTick，主循环里也在用它。
- *         中断里直接调，会把主循环正在等的那个延时打断，让它永远等不到
- *         COUNTFLAG，就地卡死，最后被看门狗复位。所以这里把 SysTick 的配置
- *         存下来，用完原样恢复。
- */
-static void BspPdIsrDelayUs(uint32_t u32Us)
-{
-    uint64_t u64CmpSave  = SysTick->CMP;
-    uint32_t u32CtlrSave = SysTick->CTLR;
 
-    Delay_Us(u32Us);
-
-    SysTick->CTLR &= ~(1u << 0);                    /* 先停，再恢复配置 */
-    SysTick->CMP   = u64CmpSave;
-    SysTick->CTLR  = u32CtlrSave;
-}
 
 
 /**
@@ -114,77 +96,6 @@ static void BspPdTxStart(const uint8_t *pu8Data, uint8_t u8Len, uint8_t u8Sop)
     USBPD->TX_SEL      = u8Sop;                     /* 前置码类型：UPD_SOP0 = 普通报文 */
     USBPD->BMC_TX_SZ   = u8Len;                     /* 要发几个字节 */
 }
-
-
-
-/* ---- 中断服务函数 ---- */
-
-void USBPD_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
-void USBPD_IRQHandler(void)
-{
-    if (USBPD->STATUS & IF_RX_ACT)                  /* 一帧收完 */
-    {
-        uint8_t u8Sop;
-        uint8_t u8Type;
-
-        USBPD->STATUS |= IF_RX_ACT;                 /* 写 1 清标志 */
-
-        u8Sop  = (uint8_t)(USBPD->STATUS & MASK_PD_STAT);   /* 这一帧的 SOP 类型 */
-        u8Type = (uint8_t)(tBuf.au8Rx[0] & 0x1Fu);             /* 这一帧的消息类型 */
-
-        if (u8Sop == (uint8_t)PD_RX_SOP0)
-        {
-            tFlag.u8RxLen = (uint8_t)USBPD->BMC_BYTE_CNT; /* 帧总长，含尾部 4 字节 CRC */
-
-            /* 对端发来的本身就是 GoodCRC 时不再应答 */
-            if ((tFlag.u8RxLen >= 6u) &&
-                ((tFlag.u8RxLen != 6u) || (u8Type != (uint8_t)DEF_TYPE_GOODCRC)))
-            {
-                BspPdIsrDelayUs((uint32_t)BSP_PD_ACK_DELAY_US);   /* 等对端把接收窗口打开 */
-
-                tBuf.au8Ack[0] = 0x41u;                                  /* GoodCRC 头 */
-                tBuf.au8Ack[1] = (uint8_t)(tBuf.au8Rx[1] & 0x0Eu);         /* 回它的消息 ID */
-
-                tFlag.u8AckPend = 1u;
-                USBPD->CONFIG |= IE_TX_END;                            /* 只这一次开发送完成中断 */
-                BspPdTxStart(tBuf.au8Ack, 2u, UPD_SOP0);
-            }
-            /* 收的是 GoodCRC 就什么也不做：硬件仍停在接收态，上层也不需要看它 */
-        }
-    }
-
-    if (USBPD->STATUS & IF_TX_END)                  /* 上面那个 GoodCRC 发完了 */
-    {
-        /* 发完必须立刻放掉 CC 的低压驱动：官方例程与旧工程都在这里清。
-           不清的话，CC 会被一直钳在发送电平上，源端会当成受电端拔出而切断 VBUS。 */
-        USBPD->PORT_CC1 &= ~CC_LVE;
-        USBPD->PORT_CC2 &= ~CC_LVE;
-
-        USBPD->STATUS |= IF_TX_END;                 /* 写 1 清标志 */
-        USBPD->CONFIG &= ~IE_TX_END;                /* 关掉，免得下次主动发送时误触发 */
-
-        if (tFlag.u8AckPend != 0u)
-        {
-            tFlag.u8AckPend = 0u;
-            tFlag.u8RxReady = 1u;                         /* 整帧已就绪，等上层来取 */
-            NVIC_DisableIRQ(USBPD_IRQn);            /* 取走之前不再收，免得冲掉缓冲 */
-        }
-    }
-
-    if (USBPD->STATUS & IF_RX_RESET)                /* 对端复位或断连 */
-    {
-        USBPD->STATUS |= IF_RX_RESET;               /* 写 1 清标志 */
-        BspPdSinkInit();                            /* CC 重新配成 SNK，等对端重新来一轮 */
-    }
-
-    if (USBPD->STATUS & BUF_ERR)                    /* 缓冲或 DMA 出错：这一帧没收全 */
-    {
-        USBPD->STATUS |= BUF_ERR;
-    }
-}
-
-
-
 
 
 
@@ -338,31 +249,31 @@ eStatusDef BspPdSend(const uint8_t *pu8Data, uint8_t u8Len)
         }
         USBPD->STATUS |= IF_TX_END;                /* 写 1 清标志（超时也要清） */
 
-        /* 切到接收，等对端的 GoodCRC */
-        USBPD->PORT_CC1 &= ~CC_LVE;
-        USBPD->PORT_CC2 &= ~CC_LVE;
-        USBPD->CONFIG |= PD_ALL_CLR;
-        USBPD->CONFIG &= ~PD_ALL_CLR;
-        USBPD->CONTROL &= ~PD_TX_EN;
-        USBPD->DMA = (uint32_t)(uint8_t *)tBuf.au8Rx;
-        USBPD->BMC_CLK_CNT = UPD_TMR_RX_48M;
-        USBPD->CONTROL |= BMC_START;
+        // /* 切到接收，等对端的 GoodCRC */
+        // USBPD->PORT_CC1 &= ~CC_LVE;
+        // USBPD->PORT_CC2 &= ~CC_LVE;
+        // USBPD->CONFIG |= PD_ALL_CLR;
+        // USBPD->CONFIG &= ~PD_ALL_CLR;
+        // USBPD->CONTROL &= ~PD_TX_EN;
+        // USBPD->DMA = (uint32_t)(uint8_t *)tBuf.au8Rx;
+        // USBPD->BMC_CLK_CNT = UPD_TMR_RX_48M;
+        // USBPD->CONTROL |= BMC_START;
 
-        u16Wait = 250u;                            /* 约 750us 的接收窗口 */
-        while (u16Wait != 0u)
-        {
-            if ((USBPD->STATUS & IF_RX_ACT) != 0u)
-            {
-                USBPD->STATUS |= IF_RX_ACT;
-                if ((USBPD->BMC_BYTE_CNT == 6u) &&             /* 控制报文的线上长度 */
-                    ((tBuf.au8Rx[0] & 0x1Fu) == DEF_TYPE_GOODCRC))
-                {
-                    break;                             /* 对端确认了 */
-                }
-            }
-            Delay_Us(3);
-            u16Wait--;
-        }
+        // u16Wait = 250u;                            /* 约 750us 的接收窗口 */
+        // while (u16Wait != 0u)
+        // {
+        //     if ((USBPD->STATUS & IF_RX_ACT) != 0u)
+        //     {
+        //         USBPD->STATUS |= IF_RX_ACT;
+        //         if ((USBPD->BMC_BYTE_CNT == 6u) &&             /* 控制报文的线上长度 */
+        //             ((tBuf.au8Rx[0] & 0x1Fu) == DEF_TYPE_GOODCRC))
+        //         {
+        //             break;                             /* 对端确认了 */
+        //         }
+        //     }
+        //     Delay_Us(3);
+        //     u16Wait--;
+        // }
 
         BspPdRxMode();                             /* 不管成没成，都恢复接收模式 */
 
@@ -378,4 +289,81 @@ eStatusDef BspPdSend(const uint8_t *pu8Data, uint8_t u8Len)
     }
 
     return E_ERROR;                                /* 重发完还没等到确认 */
+}
+
+/* ---- 中断服务函数 ---- */
+void USBPD_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+void USBPD_IRQHandler(void)
+{
+    if (USBPD->STATUS & IF_RX_ACT)                  /* 一帧收完 */
+    {
+        uint8_t u8Sop;
+        uint8_t u8Type;
+
+        USBPD->STATUS |= IF_RX_ACT;                 /* 写 1 清标志 */
+
+        u8Sop  = (uint8_t)(USBPD->STATUS & MASK_PD_STAT);   /* 这一帧的 SOP 类型 */
+        u8Type = (uint8_t)(tBuf.au8Rx[0] & 0x1Fu);             /* 这一帧的消息类型 */
+
+        if (u8Sop == (uint8_t)PD_RX_SOP0)
+        {
+            tFlag.u8RxLen = (uint8_t)USBPD->BMC_BYTE_CNT; /* 帧总长，含尾部 4 字节 CRC */
+
+            /* 对端发来的本身就是 GoodCRC 时不再应答 */
+            if ((tFlag.u8RxLen >= 6u) &&
+                ((tFlag.u8RxLen != 6u) || (u8Type != (uint8_t)DEF_TYPE_GOODCRC)))
+            {
+                BspTime2Start();    
+
+
+                // tBuf.au8Ack[0] = 0x41u;                                  /* GoodCRC 头 */
+                // tBuf.au8Ack[1] = (uint8_t)(tBuf.au8Rx[1] & 0x0Eu);         /* 回它的消息 ID */
+                // tFlag.u8AckPend = 1u;
+                // USBPD->CONFIG |= IE_TX_END;                            /* 只这一次开发送完成中断 */
+                // BspPdTxStart(tBuf.au8Ack, 2u, UPD_SOP0);
+            }
+            /* 收的是 GoodCRC 就什么也不做：硬件仍停在接收态，上层也不需要看它 */
+        }
+    }
+
+    if (USBPD->STATUS & IF_TX_END)                  /* 上面那个 GoodCRC 发完了 */
+    {
+        /* 发完必须立刻放掉 CC 的低压驱动：官方例程与旧工程都在这里清。
+           不清的话，CC 会被一直钳在发送电平上，源端会当成受电端拔出而切断 VBUS。 */
+        USBPD->PORT_CC1 &= ~CC_LVE;
+        USBPD->PORT_CC2 &= ~CC_LVE;
+
+        USBPD->STATUS |= IF_TX_END;                 /* 写 1 清标志 */
+        USBPD->CONFIG &= ~IE_TX_END;                /* 关掉，免得下次主动发送时误触发 */
+
+        if (tFlag.u8AckPend != 0u)
+        {
+            tFlag.u8AckPend = 0u;
+            tFlag.u8RxReady = 1u;                         /* 整帧已就绪，等上层来取 */
+            NVIC_DisableIRQ(USBPD_IRQn);            /* 取走之前不再收，免得冲掉缓冲 */
+        }
+    }
+
+    if (USBPD->STATUS & IF_RX_RESET)                /* 对端复位或断连 */
+    {
+        USBPD->STATUS |= IF_RX_RESET;               /* 写 1 清标志 */
+        BspPdSinkInit();                            /* CC 重新配成 SNK，等对端重新来一轮 */
+    }
+
+    if (USBPD->STATUS & BUF_ERR)                    /* 缓冲或 DMA 出错：这一帧没收全 */
+    {
+        USBPD->STATUS |= BUF_ERR;
+    }
+}
+
+void TIM2_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+void TIM2_UP_IRQHandler(void)
+{
+    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+    tBuf.au8Ack[0] = 0x41u;                                  /* GoodCRC 头 */
+    tBuf.au8Ack[1] = (uint8_t)(tBuf.au8Rx[1] & 0x0Eu);         /* 回它的消息 ID */
+    tFlag.u8AckPend = 1u;
+    USBPD->CONFIG |= IE_TX_END;                            /* 只这一次开发送完成中断 */
+    BspPdTxStart(tBuf.au8Ack, 2u, UPD_SOP0);
+    BspTime2Close();
 }

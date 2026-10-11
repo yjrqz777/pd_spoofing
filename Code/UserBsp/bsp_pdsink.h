@@ -35,8 +35,9 @@ extern "C" {
  */
 #define BSP_PD_ACK_DELAY_US  (30u)
 
-/* ---- 初始化 ---- */
+#define BSP_PD_TX_DELAY_US  (30u)   /* BspPdSend() 等 GoodCRC 的超时 25 µs – 195 µs */
 
+/* ---- 初始化 ---- */
 /** @brief 时钟、CC 引脚、USBPD 外设、中断优先级、接收模式，一次配好 */
 void BspPdPhyInit(void);
 

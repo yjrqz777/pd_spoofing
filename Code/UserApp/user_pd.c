@@ -68,15 +68,10 @@ static void UserPdApply(void)
 
 static void UserPdService(void)
 {
-    static uint8_t u8LastIsConnected = 0u;
     static uint8_t u8LastState = E_DEV_PD_IDLE;
-    if (DevPdIsConnected() != u8LastIsConnected)        /* 插拔变化打一条，方便看 */
+    if (DevPdIsConnected() == 0)        /* 插拔变化打一条，方便看 */
     {
-        u8LastIsConnected = DevPdIsConnected();
-        if (u8LastIsConnected != 0u)
-        {
-            tTgt.u8ReqSwitch = 1u;                 /* 刚插上，重新申请目标档位 */
-        }
+        tTgt.u8ReqSwitch = 1u;                 /* 刚插上，重新申请目标档位 */
     }
 
     if (DevPdGetState() != u8LastState)          /* 协商状态变化也打一条 */

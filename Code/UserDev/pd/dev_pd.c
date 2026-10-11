@@ -14,7 +14,7 @@
 
 #include "dev_pd.h"
 #include "UserBsp/bsp_pdsink.h"
-
+#include "UserDev/sensor/dev_sensor.h"
 /* ---- 模块内部上下文（按用途分成四组） ---- */
 
 /** @brief 能力报文与档位表：当前一份 + 上一份，用来判断内容有没有变
@@ -455,39 +455,56 @@ static void DevPdDetectCc(void)
     }
     u8TimeCount = 0u;
 
+
+
+    if (tLink.u8Connected != 0u)                  /* 有充电器 */
+    {
+        if(DevSensorGetValue(E_DEV_VBUS) > 2.5f)
+        {
+            u8DetCnt = 0;
+            return;
+        }
+
+        if (++u8DetCnt < (uint8_t)DEV_PD_DET_CONFIRM)
+        {
+            return;
+        }
+        u8DetCnt = 0;
+        tLink.u8Connected    = 0u;
+        tLink.u8ActiveIndex = 0xFFu;
+        tLink.u16ActiveMv   = 0u;
+        tLink.eState        = E_DEV_PD_IDLE;
+        BspPdPhyReset();
+        log_info("PD disconnected");
+
+        return;
+    }
+
+
+
     u8Which = BspPdDetectCc();
     if (u8Which == 0u)
     {
         u8DetCnt = 0u;
-        if (tLink.u8Connected != 0u)                  /* 拔掉了 */
-        {
-            tLink.u8Connected    = 0u;
-            tLink.u8ActiveIndex = 0xFFu;
-            tLink.u16ActiveMv   = 0u;
-            tLink.eState        = E_DEV_PD_IDLE;
-            BspPdPhyReset();
-        }
         return;
     }
 
-    if (tLink.u8Connected != 0u)
+    if (++u8DetCnt < (uint8_t)DEV_PD_DET_CONFIRM)
     {
-        BspPdSelectCc(u8Which);             /* 检测动过 CC 配置，恢复回通信用的那套 */
-        return;                             /* 已经连上了，不再重复确认 */
+        return;
     }
-
-    if (++u8DetCnt >= (uint8_t)DEV_PD_DET_CONFIRM)
-    {
-        BspPdSelectCc(u8Which);         /* 定下走哪一路 CC */
-        tLink.u8Connected   = 1u;
-        tCap.u8Count    = 0u;
-        tLink.u8ActiveIndex = 0xFFu;
-        tLink.u16ActiveMv   = 0u;
-        tLink.u8PendIndex   = 0u;
-        tLink.u8ErrCnt      = 0u;
-        tLink.u16Timer      = 0u;
-        tLink.eState        = E_DEV_PD_WAIT_SRC_CAP;
-    }
+    u8DetCnt = 0;
+    
+    BspPdSelectCc(u8Which);         /* 定下走哪一路 CC */
+    tLink.u8Connected   = 1u;
+    tCap.u8Count    = 0u;
+    tLink.u8ActiveIndex = 0xFFu;
+    tLink.u16ActiveMv   = 0u;
+    tLink.u8PendIndex   = 0u;
+    tLink.u8ErrCnt      = 0u;
+    tLink.u16Timer      = 0u;
+    tLink.eState        = E_DEV_PD_WAIT_SRC_CAP;
+    log_info("PD connected, wait src cap");
 }
 
 

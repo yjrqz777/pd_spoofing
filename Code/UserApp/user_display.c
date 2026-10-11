@@ -143,7 +143,7 @@ static void DisplayOff(void)
     DevWs2812Fill(u8Red, u8Green, u8Blue);
 
     pcPps = (UserPdHasPps() != 0u) ? "PPS YES" : "PPS NO";
-    sprintf(acString, "%0.2fV", UserPdGetTargetMv() / 1000.0f);
+    sprintf(acString, "%5.2fV", UserPdGetTargetMv() / 1000.0f);
 
 
     if (u8RunFg == 0)

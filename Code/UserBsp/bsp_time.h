@@ -74,7 +74,8 @@ void BspIrqDisableAll(void);
  * @brief  打开全局中断（退出临界区）。
  */
 void BspIrqEnableAll(void);
-
+void BspTime2Start(void);
+void BspTime2Close(void);
 #ifdef __cplusplus
 }
 #endif

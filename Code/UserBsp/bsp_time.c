@@ -16,6 +16,7 @@
  */
 
 #include "bsp_time.h"
+#include "bsp_pdsink.h"
 #include "Task.h"
 
 volatile uint32_t PT_TICK[TASK_MAX] = {0u}; /* pd 任务定时器数组 */
@@ -66,6 +67,7 @@ void BspTime3Init(void)
 void BspTim1BaseInit(void)
 {
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
+
     memset(&TIM_TimeBaseInitStructure, 0, sizeof(TIM_TimeBaseInitStructure));
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);   /* TIM1 时钟在 APB2，必须显式使能 */
@@ -81,11 +83,66 @@ void BspTim1BaseInit(void)
     TIM_Cmd(TIM1, ENABLE);                                 /* 计数器总开关，CH1~CH4 共用 */
 
 }
+void BspTim2BaseInit(void)
+{
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure;
+    NVIC_InitTypeDef        NVIC_InitStructure;
+    memset(&TIM_TimeBaseInitStructure, 0, sizeof(TIM_TimeBaseInitStructure));
+    memset(&NVIC_InitStructure, 0, sizeof(NVIC_InitStructure));
 
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);   /* TIM2 时钟在 APB1，必须显式使能 */
+
+    TIM_TimeBaseInitStructure.TIM_Prescaler         = (uint16_t)(SystemCoreClock / 1000000u) - 1u; /* 48-1 = 47 */
+    TIM_TimeBaseInitStructure.TIM_Period            = (uint16_t)(BSP_PD_TX_DELAY_US) - 1u;      /* 1000-1 = 999 */
+    TIM_TimeBaseInitStructure.TIM_ClockDivision     = TIM_CKD_DIV1;
+    TIM_TimeBaseInitStructure.TIM_CounterMode       = TIM_CounterMode_Up;
+    TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0u;
+    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseInitStructure);
+
+    TIM_ARRPreloadConfig(TIM2, ENABLE);                    /* ARR 预装载：在更新事件后生效 */
+
+
+    /* 3) 清掉 UG 位产生的更新标志，避免使能中断后立即补一次中断 */
+    TIM_ClearFlag(TIM2, TIM_FLAG_Update);
+    /* 4) NVIC（PFIC）配置：TIM2_UP_IRQn */
+    NVIC_InitStructure.NVIC_IRQChannel                   = TIM2_UP_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority  = 0;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority        = 0;
+    NVIC_InitStructure.NVIC_IRQChannelCmd                = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+
+    /* 5) 使能更新中断（TIM3_DMAINTENR.UIE） */
+    // TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+    // TIM_Cmd(TIM2, ENABLE);                                 /* 计数器总开关，CH1~CH4 共用 */
+    log_info("BspTim2BaseInit");
+
+}
 void BspTimeInit(void)
 {
+    BspTim2BaseInit();                                        /* TIM2 用于 GoodCRC 的超时 */
     BspTime3Init();                                        /* 系统节拍初始化（TIM3） */
 }
+
+
+void BspTime2Start(void)
+{
+    TIM_ClearFlag(TIM2, TIM_FLAG_Update);
+    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+    TIM_SetCounter(TIM2, 0u);
+    TIM_Cmd(TIM2, ENABLE);
+}
+
+
+void BspTime2Close(void)
+{
+    TIM_ClearFlag(TIM2, TIM_FLAG_Update);
+    TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
+    TIM_SetCounter(TIM2, 0u);
+    TIM_Cmd(TIM2, DISABLE);
+}
+
+
+
 
 uint32_t BspTimeGetMs(void)
 {
