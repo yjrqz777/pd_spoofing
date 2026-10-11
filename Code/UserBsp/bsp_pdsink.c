@@ -249,7 +249,7 @@ eStatusDef BspPdSend(const uint8_t *pu8Data, uint8_t u8Len)
         }
         USBPD->STATUS |= IF_TX_END;                /* 写 1 清标志（超时也要清） */
 
-        // /* 切到接收，等对端的 GoodCRC */
+        // /* 不管 GoodCRC */
         // USBPD->PORT_CC1 &= ~CC_LVE;
         // USBPD->PORT_CC2 &= ~CC_LVE;
         // USBPD->CONFIG |= PD_ALL_CLR;
