@@ -1,3 +1,8 @@
+/**
+ * @file dev_flash.c
+ * @brief CH32X035 片内 Flash 主区和备份区驱动实现。
+ */
+
 #include "dev_flash.h"
 
 #include <string.h>
@@ -6,6 +11,11 @@
 
 #define DEV_FLASH_WORDS_PER_PAGE (FLASH_PAGE_SIZE / sizeof(uint32_t))
 
+/**
+ * @brief 获取存储区对应的 Flash 起始地址。
+ * @param[in] region 存储区选择。
+ * @return 对应地址；region 无效时返回 0。
+ */
 static uint32_t dev_flash_region_address(dev_flash_region_t region)
 {
     switch (region)
@@ -21,11 +31,19 @@ static uint32_t dev_flash_region_address(dev_flash_region_t region)
     }
 }
 
+/**
+ * @brief 检查存储区选择是否有效。
+ * @param[in] region 存储区选择。
+ * @return 有效返回非 0，无效返回 0。
+ */
 static uint8_t dev_flash_region_valid(dev_flash_region_t region)
 {
     return (uint8_t)(dev_flash_region_address(region) != 0U);
 }
 
+/**
+ * @copydoc dev_flash_read()
+ */
 dev_flash_status_t dev_flash_read(dev_flash_region_t region,
                                   uint8_t *data,
                                   uint16_t len)
@@ -42,6 +60,9 @@ dev_flash_status_t dev_flash_read(dev_flash_region_t region,
     return DEV_FLASH_OK;
 }
 
+/**
+ * @copydoc dev_flash_erase()
+ */
 dev_flash_status_t dev_flash_erase(dev_flash_region_t region)
 {
     uint32_t address = dev_flash_region_address(region);
@@ -59,6 +80,9 @@ dev_flash_status_t dev_flash_erase(dev_flash_region_t region)
     return DEV_FLASH_OK;
 }
 
+/**
+ * @copydoc dev_flash_write()
+ */
 dev_flash_status_t dev_flash_write(dev_flash_region_t region,
                                    const uint8_t *data,
                                    uint16_t len)
@@ -73,7 +97,7 @@ dev_flash_status_t dev_flash_write(dev_flash_region_t region,
         return DEV_FLASH_ERROR_PARAM;
     }
 
-    /* Unwritten bytes in this page have the erased value. */
+    /* 未写入部分保持擦除态 0xFF。 */
     memset(page_buffer, 0xFF, sizeof(page_buffer));
     memcpy((uint8_t *)page_buffer, data, len);
 
@@ -98,6 +122,9 @@ dev_flash_status_t dev_flash_write(dev_flash_region_t region,
     return DEV_FLASH_OK;
 }
 
+/**
+ * @copydoc dev_flash_copy()
+ */
 dev_flash_status_t dev_flash_copy(dev_flash_region_t source,
                                   dev_flash_region_t destination)
 {
