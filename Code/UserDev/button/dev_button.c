@@ -34,11 +34,11 @@ static volatile tDevButtonQueueDef sQueue;
 /* 按键状态机状态（本文件私有） */
 typedef enum
 {
-    E_DEV_BTN_STATE_IDLE = 0,    /* 空闲 */
-    E_DEV_BTN_STATE_PRESS,       /* 已按下 */
-    E_DEV_BTN_STATE_RELEASE,     /* 已抬起，等待多击超时 */
-    E_DEV_BTN_STATE_REPEAT,      /* 连击中的再次按下 */
-    E_DEV_BTN_STATE_LONG_HOLD    /* 长按保持 */
+    E_DEV_BTN_STATE_IDLE = 0,    /**< 空闲 */
+    E_DEV_BTN_STATE_PRESS,       /**< 已按下 */
+    E_DEV_BTN_STATE_RELEASE,     /**< 已抬起，等待多击超时 */
+    E_DEV_BTN_STATE_REPEAT,      /**< 连击中的再次按下 */
+    E_DEV_BTN_STATE_LONG_HOLD    /**< 长按保持 */
 } eDevButtonStateDef;
 
 /* 一行 = 一条订阅：（键值掩码, 事件）→ 回调，加上它自己的状态机计数 */
