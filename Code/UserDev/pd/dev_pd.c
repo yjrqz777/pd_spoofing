@@ -1,5 +1,5 @@
 /**
- * @file    dev_pd.c
+ * @file dev_pd.c
  * @brief   USB-PD sink 协议层（Device）：报文编解码、能力报文解析、协商状态机
  *******************************************************************************
  * @note    移植自 tools/EVT/EXAM/USBPD/USBPD_SNK（WCH 官方 sink 例程）的
@@ -10,6 +10,11 @@
  *            - 例程的 printf 全部去掉，状态通过 DevPdGetState() 给上层；
  *            - 例程的 PD_Detect 挪到 BSP 的 BspPdDetectCc()，本层只做防抖和判定。
  *******************************************************************************
+  * @author 段志炫
+ * @date 2026-10-15
+ * @version 0.1.1
+ * @par 修改记录
+ * 2026-10-15 按项目规范补充中文 Doxygen 注释。
  */
 
 #include "dev_pd.h"
@@ -226,6 +231,12 @@ static uint8_t PdSaveSrcCap(uint8_t u8Len)
     return u8Changed;
 }
 
+/**
+ * @brief PdTryRequest 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 static void PdTryRequest(void);
 
 /** @brief 处理一条收到的报文 */
@@ -424,6 +435,12 @@ static void PdTryRequest(void)
 
 /* ---- 公共接口 ---- */
 
+/**
+ * @brief DevPdInit 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 void DevPdInit(void)
 {
     tLink.eState        = E_DEV_PD_IDLE;
@@ -444,6 +461,12 @@ void DevPdInit(void)
 
 
 
+/**
+ * @brief DevPdDetectCc 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 static void DevPdDetectCc(void)
 {
     uint8_t u8Which;
@@ -515,6 +538,12 @@ static void DevPdDetectCc(void)
 
 
 
+/**
+ * @brief DevPdService 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 void DevPdService(void)
 {
     uint8_t u8Len = 0u;
@@ -577,6 +606,12 @@ void DevPdService(void)
 
 }
 
+/**
+ * @brief DevPdRequestPdo 接口处理函数。
+ * @param[in] u8PdoIndex 参数值，单位和范围按接口定义。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 eStatusDef DevPdRequestPdo(uint8_t u8PdoIndex)
 {
     uint8_t i;
@@ -602,6 +637,12 @@ eStatusDef DevPdRequestPdo(uint8_t u8PdoIndex)
     return E_ERROR;
 }
 
+/**
+ * @brief DevPdRestart 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 void DevPdRestart(void)
 {
     tCap.u8Count        = 0u;
@@ -624,11 +665,23 @@ eDevPdStateDef DevPdGetState(void)
     return tLink.eState;
 }
 
+/**
+ * @brief DevPdGetPdoCount 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t DevPdGetPdoCount(void)
 {
     return tCap.u8Count;
 }
 
+/**
+ * @brief DevPdHasPps 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t DevPdHasPps(void)
 {
     return tCap.u8HasPps;
@@ -643,16 +696,34 @@ const tDevPdPdoDef *DevPdGetPdo(uint8_t u8Index)
     return &tCap.tPdo[u8Index];
 }
 
+/**
+ * @brief DevPdGetActiveIndex 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t DevPdGetActiveIndex(void)
 {
     return tLink.u8ActiveIndex;
 }
 
+/**
+ * @brief DevPdGetActiveMv 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint16_t DevPdGetActiveMv(void)
 {
     return tLink.u16ActiveMv;
 }
 
+/**
+ * @brief DevPdIsConnected 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t DevPdIsConnected(void)
 {
     return tLink.u8Connected;
