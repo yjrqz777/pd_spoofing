@@ -16,11 +16,11 @@
 
 typedef enum
 {
-    E_DEV_VBUS,       /**< 输入母线电压（PC0 / IN10） */
-    E_DEV_VOUT,       /**< 输出电压（PC3 / IN13）     */
-    E_DEV_IBUS,         /**< 输出电流（PA3 / IN3）      */
+    E_DEV_VBUS,       /**< *< 输入母线电压（PC0 / IN10） */
+    E_DEV_VOUT,       /**< *< 输出电压（PC3 / IN13） */
+    E_DEV_IBUS,         /**< *< 输出电流（PA3 / IN3） */
     E_DEV_POW,
-    E_DEV_CH_MAX      /**< 通道总数（边界标记）       */
+    E_DEV_CH_MAX      /**< *< 通道总数（边界标记） */
 } eDevChannelDef;
 /**
  * @brief DevSensorGetValue 接口处理函数。
