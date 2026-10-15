@@ -1,6 +1,11 @@
 /**
- * @file    dev_ws2812.c
+ * @file dev_ws2812.c
  * @brief   WS2812 灯珠阵列设备层：颜色装配成 GRB 帧并通过 BSP 发送。
+  * @author 段志炫
+ * @date 2026-10-15
+ * @version 0.1.1
+ * @par 修改记录
+ * 2026-10-15 按项目规范补充中文 Doxygen 注释。
  */
 
 #include "dev_ws2812.h"
