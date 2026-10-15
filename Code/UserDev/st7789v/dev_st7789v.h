@@ -1,5 +1,5 @@
 /**
- * @file    st7789v.h
+ * @file dev_st7789v.h
  * @brief   ST7789V LCD 驱动头文件 — SPI 接口 240×135 彩色液晶屏
  *******************************************************************************
  * @note    支持 4 种显示方向（横屏/竖屏），16-bit RGB565 色彩
@@ -11,6 +11,11 @@
  *            - SPI1_TX 使用 DMA1 通道 3 异步发送像素缓冲区
  *          引脚定义来自 Code/main.h，与原理图 NETLIST 一致。
  *******************************************************************************
+  * @author 段志炫
+ * @date 2026-10-15
+ * @version 0.1.1
+ * @par 修改记录
+ * 2026-10-15 按项目规范补充中文 Doxygen 注释。
  */
 
 #ifndef __DEV_ST7789V_H__
@@ -100,15 +105,82 @@
  */
 typedef void (*DevSt7789vRowFn)(uint16_t u16Row, uint16_t u16W, uint16_t *pu16Line);
 
+/**
+ * @brief DevSt7789vInit 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 void DevSt7789vInit(void);
+/**
+ * @brief DevSt7789vFillRectStart 接口处理函数。
+ * @param[in] x 参数值，单位和范围按接口定义。
+ * @param[in] y 参数值，单位和范围按接口定义。
+ * @param[in] w 参数值，单位和范围按接口定义。
+ * @param[in] h 参数值，单位和范围按接口定义。
+ * @param[in] u16Color 参数值，单位和范围按接口定义。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t  DevSt7789vFillRectStart(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t u16Color);
+/**
+ * @brief DevSt7789vBlitRectStart 接口处理函数。
+ * @param[in] x 参数值，单位和范围按接口定义。
+ * @param[in] y 参数值，单位和范围按接口定义。
+ * @param[in] w 参数值，单位和范围按接口定义。
+ * @param[in] h 参数值，单位和范围按接口定义。
+ * @param[in] pfnRow 参数值，单位和范围按接口定义。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t  DevSt7789vBlitRectStart(uint16_t x, uint16_t y, uint16_t w, uint16_t h, DevSt7789vRowFn pfnRow);
+/**
+ * @brief DevSt7789vFillScreenStart 接口处理函数。
+ * @param[in] u16Color 参数值，单位和范围按接口定义。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t  DevSt7789vFillScreenStart(uint16_t u16Color);
+/**
+ * @brief DevSt7789vShowImg 接口处理函数。
+ * @param[in] pu8Img 参数值，单位和范围按接口定义。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t  DevSt7789vShowImg(const uint8_t *pu8Img);
+/**
+ * @brief DevSt7789vDrawText 接口处理函数。
+ * @param[in] i16X 参数值，单位和范围按接口定义。
+ * @param[in] i16BaselineY 参数值，单位和范围按接口定义。
+ * @param[in] ptFont 参数值，单位和范围按接口定义。
+ * @param[in] u16Fg 参数值，单位和范围按接口定义。
+ * @param[in] u16Bg 参数值，单位和范围按接口定义。
+ * @param[in] pcText 参数值，单位和范围按接口定义。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t  DevSt7789vDrawText(int16_t i16X, int16_t i16BaselineY, const tFont *ptFont,
                             uint16_t u16Fg, uint16_t u16Bg, const char *pcText);
+/**
+ * @brief DevSt7789vShow 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint8_t  DevSt7789vShow(void);
+/**
+ * @brief DevSt7789vService 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 void     DevSt7789vService(void);
+/**
+ * @brief DevSt7789vTask 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint16_t DevSt7789vTask(void);
 
 #endif /* __ST7789V_H__ */
