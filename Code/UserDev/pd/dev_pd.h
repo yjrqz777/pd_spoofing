@@ -1,5 +1,5 @@
 /**
- * @file    dev_pd.h
+ * @file dev_pd.h
  * @brief   USB-PD sink 协议层（Device）：报文编解码、能力报文解析、协商状态机
  *******************************************************************************
  * @note    本模块属于 Device：
@@ -7,7 +7,12 @@
  *            - 向下只调 bsp_pdsink.h 的收发接口，不碰 USBPD 寄存器、不碰 CC 引脚；
  *            - 器件上下文 static 在 dev_pd.c 内，上层拿不到句柄。
  *******************************************************************************
- */
+ 
+ * @author 段志炫
+ * @date 2026-10-15
+ * @version 0.1.1
+ * @par 修改记录
+ * 2026-10-15 按项目注释规范补齐文件和接口说明。*/
 
 #ifndef __DEV_PD_H__
 #define __DEV_PD_H__
@@ -80,51 +85,96 @@ typedef enum
 
 /* ---- 初始化与推进 ---- */
 
-/** @brief 初始化协议层（复位上下文）。BSP 初始化之后调一次 */
+/**
+ * @brief 初始化 USB-PD 协议上下文
+ * @param[in] 无 无输入参数。
+ * @return 无返回值。
+ * @note 调用前确认参数有效，并在模块规定的上下文中调用。
+ */
 void DevPdInit(void);
 
-/** @brief 周期推进：取帧、解帧、跑状态机、管超时重试。放任务里调 */
+/**
+ * @brief 推进 USB-PD 协商状态机
+ * @param[in] 无 无输入参数。
+ * @return 无返回值。
+ * @note 由上层按 DEV_PD_SERVICE_MS 周期调用，以及时处理收发和超时。
+ */
 void DevPdService(void);
 
 /* ---- 协商动作 ---- */
 
 /**
- * @brief  请求一个档位（异步，发出去就返回）
- * @param[in] u8PdoIndex tDevPdPdoDef.u8PdoIndex 拿到的序号
- * @retval E_OK    已受理
- * @retval E_BUSY  上一件事还没完
- * @retval E_ERROR 当前状态不允许请求
+ * @brief 请求对端提供指定 PDO 档位
+ * @param[in] u8PdoIndex PDO 在对端能力报文中的序号，范围为 1 至已解析档位数。
+ * @return 操作状态，具体成功、忙碌或错误值由调用接口定义。
+ * @note 请求为异步操作；调用返回仅表示请求已受理，不表示电源协商完成。
  */
 eStatusDef DevPdRequestPdo(uint8_t u8PdoIndex);
 
-/** @brief 重新来一遍：复位协议层，回到等能力报文 */
+/**
+ * @brief 复位协议上下文并重新开始协商
+ * @param[in] 无 无输入参数。
+ * @return 无返回值。
+ * @note 调用前确认参数有效，并在模块规定的上下文中调用。
+ */
 void DevPdRestart(void);
 
 /* ---- 查询 ---- */
 
-/** @brief 当前协商状态 */
+/**
+ * @brief 读取当前协商状态
+ * @param[in] 无 无输入参数。
+ * @return 函数执行结果或查询值，取值含义见函数说明。
+ * @note 调用前确认参数有效，并在模块规定的上下文中调用。
+ */
 eDevPdStateDef DevPdGetState(void);
 
-/** @brief 解析出来的档位个数（只含固定档，可调档不进换档表） */
+/**
+ * @brief 读取已解析的固定 PDO 数量
+ * @param[in] 无 无输入参数。
+ * @return 函数执行结果或查询值，取值含义见函数说明。
+ * @note 调用前确认参数有效，并在模块规定的上下文中调用。
+ */
 uint8_t DevPdGetPdoCount(void);
 
-/** @brief 对端能力报文里有没有可调档（PPS）：1 = 支持 */
+/**
+ * @brief 查询对端是否支持 PPS
+ * @param[in] 无 无输入参数。
+ * @return 函数执行结果或查询值，取值含义见函数说明。
+ * @note 调用前确认参数有效，并在模块规定的上下文中调用。
+ */
 uint8_t DevPdHasPps(void);
 
 /**
- * @brief  取一个档位
- * @param[in] u8Index 档位表下标（0 到 DevPdGetPdoCount()-1），不是报文里的序号
- * @return 档位指针；越界返回 0
+ * @brief 读取指定索引的 PDO 档位
+ * @param[in] u8Index PDO 档位数组下标，单位：项，从 0 开始。
+ * @return 函数执行结果或查询值，取值含义见函数说明。
+ * @note u8Index 是档位数组下标，从 0 开始，不是能力报文中的 PDO 序号。
  */
 const tDevPdPdoDef *DevPdGetPdo(uint8_t u8Index);
 
-/** @brief 当前生效的档位在报文里的序号；没有则返回 0xFF */
+/**
+ * @brief 读取当前生效 PDO 在报文中的序号
+ * @param[in] 无 无输入参数。
+ * @return 函数执行结果或查询值，取值含义见函数说明。
+ * @note 未完成协商时返回 0xFF。
+ */
 uint8_t DevPdGetActiveIndex(void);
 
-/** @brief 当前生效的电压（mV）；没协商到返回 0 */
+/**
+ * @brief 读取当前协商电压
+ * @param[in] 无 无输入参数。
+ * @return 当前任务或查询结果，单位和取值含义见函数说明。
+ * @note 未完成协商时返回 0。
+ */
 uint16_t DevPdGetActiveMv(void);
 
-/** @brief 连接检测：1 = CC 上有连接 */
+/**
+ * @brief 读取 CC 连接状态
+ * @param[in] 无 无输入参数。
+ * @return 函数执行结果或查询值，取值含义见函数说明。
+ * @note 返回值 1 表示已连接，0 表示未连接。
+ */
 uint8_t DevPdIsConnected(void);
 
 #ifdef __cplusplus
