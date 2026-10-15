@@ -191,15 +191,7 @@ void DevSt7789vDrawPoint(uint16_t x1, uint16_t y1, uint16_t color)
 }
 
 
-/* void DevSt7789vFillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color) */
-/* { */
-/* uint32_t i; */
 /* St7789vSetAddress(x1, y1, x2, y2); */
-/* for (i = 0; i < (x2 - x1 + 1) * (y2 - y1 + 1); i++) */
-/* { */
-/* St7789vSendData2Bytes(color); */
-/* } */
-/* } */
 void DevSt7789vFillRect(uint16_t color)
 {
 	uint32_t i;
@@ -455,9 +447,6 @@ void DevSt7789vInit(void)
 	(void)DevSt7789vFillScreenStart(COLOR_GREEN);
     /* (void)DevSt7789vShowImg(gau8ImgXjBw[0]); */
     (void)DevSt7789vShow();
-    /* DevSt7789vFillRect(ST7789V_RED); */
-	/* DevSt7789vDrawPoint(5, 5, ST7789V_BLUE); */
-	/* DevSt7789vDrawCircle((ST7789V_WIDTH/2), (ST7789V_HEIGHT/2), (ST7789V_HEIGHT/2), ST7789V_GREEN); */
 }
 
 
