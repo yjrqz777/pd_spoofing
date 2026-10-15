@@ -1,5 +1,5 @@
 /**
- * @file    dev_button.h
+ * @file dev_button.h
  * @brief   按键设备层：每条订阅一份状态机，1ms 节拍分频扫描，事件交主循环分发。
  *
  * @note    本模块属于 Device 层：把 GPIO 电平变成按键事件，并分发给注册的回调。
@@ -9,7 +9,12 @@
  *          扫描只推进"有活动"的行：键值有交集，或状态机还没回到空闲。
  *          中断侧逐行采样、消抖、跑状态机，命中本行订阅的事件就把行 id 压入 SPSC 队列；
  *          主循环侧在时间片内用 DevButtonProcessEvents() 取空队列并按 id 调回调。
- */
+ 
+ * @author 段志炫
+ * @date 2026-10-15
+ * @version 0.1.1
+ * @par 修改记录
+ * 2026-10-15 按项目注释规范补齐文件和接口说明。*/
 
 #ifndef __DEV_BUTTON_H__
 #define __DEV_BUTTON_H__
@@ -50,27 +55,36 @@ typedef enum
 } eDevButtonEventDef;
 
 /**
- * @brief  初始化：清空订阅表与事件队列。
- * @note   模块的调用顺序固定为 Init → Register → Start，全程只在主循环上下文。
- *         Start 之后再调 Init 或 Register 会触发断言（那时中断已经在扫表）。
+ * @brief 初始化按键订阅表和事件队列
+ * @param[in] 无 无输入参数。
+ * @return 无返回值。
+ * @note 调用前确认参数有效，并在模块规定的上下文中调用。
  */
 void               DevButtonInit(void);
 
 /**
- * @brief  开始扫描：把按键扫描挂到 1ms 节拍回调上。
- * @note   必须在所有注册完成之后调用，且只能调用一次；调用后表不再允许改动。
+ * @brief 启动按键周期扫描
+ * @param[in] 无 无输入参数。
+ * @return 无返回值。
+ * @note 必须在所有按键订阅注册完成后调用，且只能调用一次。
  */
 void DevButtonStart(void);
 
 /**
- * @brief  注册一条订阅：某按键（单键或组合）产生某事件时调用 fun。
- * @note   须在 DevButtonInit() 之后、DevButtonStart() 之前调用。
+ * @brief 注册按键事件及其回调
+ * @param[in] keyValue 按键掩码，使用 BSP 定义的按键位掩码。
+ * @param[in] event 按键事件类型，取值为按键事件枚举成员。
+ * @param[in] fun 按键事件回调函数。
+ * @return 函数执行结果或查询值，取值含义见函数说明。
+ * @note 必须在 DevButtonInit() 之后、DevButtonStart() 之前调用。
  */
 uint8_t            DevButtonRegister(uint16_t keyValue, eDevButtonEventDef event, FuncPtr fun);
 
 /**
- * @brief  取空事件队列并按行 id 分发回调。
- * @note   主循环上下文周期调用（UsrButtonTask 的 5ms 时间片）。
+ * @brief 取出按键事件并调用对应回调
+ * @param[in] 无 无输入参数。
+ * @return 无返回值。
+ * @note 在主循环上下文周期调用；不要在节拍中断中执行回调。
  */
 void               DevButtonProcessEvents(void);
 
