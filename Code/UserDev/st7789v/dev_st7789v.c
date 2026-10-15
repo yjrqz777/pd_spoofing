@@ -1,5 +1,12 @@
-
-
+/**
+ * @file dev_st7789v.c
+ * @brief ST7789V 显示屏驱动接口与实现。
+ * @author 段志炫
+ * @date 2026-10-15
+ * @version 0.1.1
+ * @par 修改记录
+ * 2026-10-15 按项目规范补充中文 Doxygen 注释。
+ */
 #include "dev_st7789v.h"
 #include "Components/font/img_xj_bw.h"
 
@@ -51,12 +58,24 @@ static int16_t      i16TextBaseY = 0;
 static int16_t      i16TextX0 = 0;   /* 文本墨迹包围盒左上角 */
 static int16_t      i16TextY0 = 0;
 
+/**
+ * @brief St7789vSendCmd 接口处理函数。
+ * @param[in] cmd 参数值，单位和范围按接口定义。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 static void St7789vSendCmd(uint8_t cmd)
 {
     BspSpiDc(ST7789V_DC_CMD);
     BspSpiSendByte(cmd);
 }
 
+/**
+ * @brief St7789vSendData 接口处理函数。
+ * @param[in] dat 参数值，单位和范围按接口定义。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 static void St7789vSendData(uint8_t dat)
 {
     BspSpiDc(ST7789V_DC_DATA);
@@ -64,6 +83,12 @@ static void St7789vSendData(uint8_t dat)
 }
 
 
+/**
+ * @brief St7789vSendData2Bytes 接口处理函数。
+ * @param[in] dat 参数值，单位和范围按接口定义。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 void St7789vSendData2Bytes(uint16_t dat)
 {
     BspSpiDc(ST7789V_DC_DATA);
@@ -84,43 +109,43 @@ void St7789vSetAddress(uint16_t x1,uint16_t y1,uint16_t x2,uint16_t y2)
 {
 	if(ST7789V_USE_HORIZONTAL==0)
 	{
-		St7789vSendCmd(ST7789V_CMD_CASET);        // 列地址设置
+		St7789vSendCmd(ST7789V_CMD_CASET); /* 列地址设置 */
 		St7789vSendData2Bytes(x1+ST7789V_OFFSET_X_0);
 		St7789vSendData2Bytes(x2+ST7789V_OFFSET_X_0);
-		St7789vSendCmd(ST7789V_CMD_RASET);        // 行地址设置
+		St7789vSendCmd(ST7789V_CMD_RASET); /* 行地址设置 */
 		St7789vSendData2Bytes(y1+ST7789V_OFFSET_Y_0);
 		St7789vSendData2Bytes(y2+ST7789V_OFFSET_Y_0);
-		St7789vSendCmd(ST7789V_CMD_RAMWR);        // 存储器写
+		St7789vSendCmd(ST7789V_CMD_RAMWR); /* 存储器写 */
 	}
 	else if(ST7789V_USE_HORIZONTAL==1)
 	{
-		St7789vSendCmd(ST7789V_CMD_CASET);        // 列地址设置
+		St7789vSendCmd(ST7789V_CMD_CASET); /* 列地址设置 */
 		St7789vSendData2Bytes(x1+ST7789V_OFFSET_X_1);
 		St7789vSendData2Bytes(x2+ST7789V_OFFSET_X_1);
-		St7789vSendCmd(ST7789V_CMD_RASET);        // 行地址设置
+		St7789vSendCmd(ST7789V_CMD_RASET); /* 行地址设置 */
 		St7789vSendData2Bytes(y1+ST7789V_OFFSET_Y_1);
 		St7789vSendData2Bytes(y2+ST7789V_OFFSET_Y_1);
-		St7789vSendCmd(ST7789V_CMD_RAMWR);        // 存储器写
+		St7789vSendCmd(ST7789V_CMD_RAMWR); /* 存储器写 */
 	}
 	else if(ST7789V_USE_HORIZONTAL==2)
 	{
-		St7789vSendCmd(ST7789V_CMD_CASET);        // 列地址设置
+		St7789vSendCmd(ST7789V_CMD_CASET); /* 列地址设置 */
 		St7789vSendData2Bytes(x1+ST7789V_OFFSET_X_2);
 		St7789vSendData2Bytes(x2+ST7789V_OFFSET_X_2);
-		St7789vSendCmd(ST7789V_CMD_RASET);        // 行地址设置
+		St7789vSendCmd(ST7789V_CMD_RASET); /* 行地址设置 */
 		St7789vSendData2Bytes(y1+ST7789V_OFFSET_Y_2);
 		St7789vSendData2Bytes(y2+ST7789V_OFFSET_Y_2);
-		St7789vSendCmd(ST7789V_CMD_RAMWR);        // 存储器写
+		St7789vSendCmd(ST7789V_CMD_RAMWR); /* 存储器写 */
 	}
 	else
 	{
-		St7789vSendCmd(ST7789V_CMD_CASET);        // 列地址设置
+		St7789vSendCmd(ST7789V_CMD_CASET); /* 列地址设置 */
 		St7789vSendData2Bytes(x1+ST7789V_OFFSET_X_3);
 		St7789vSendData2Bytes(x2+ST7789V_OFFSET_X_3);
-		St7789vSendCmd(ST7789V_CMD_RASET);        // 行地址设置
+		St7789vSendCmd(ST7789V_CMD_RASET); /* 行地址设置 */
 		St7789vSendData2Bytes(y1+ST7789V_OFFSET_Y_3);
 		St7789vSendData2Bytes(y2+ST7789V_OFFSET_Y_3);
-		St7789vSendCmd(ST7789V_CMD_RAMWR);        // 存储器写
+		St7789vSendCmd(ST7789V_CMD_RAMWR); /* 存储器写 */
 	}
 }
 
@@ -166,15 +191,15 @@ void DevSt7789vDrawPoint(uint16_t x1, uint16_t y1, uint16_t color)
 }
 
 
-// void DevSt7789vFillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
-// {
-// 	uint32_t i;
-// 	St7789vSetAddress(x1, y1, x2, y2);
-// 	for (i = 0; i < (x2 - x1 + 1) * (y2 - y1 + 1); i++)
-// 	{
-// 		St7789vSendData2Bytes(color);
-// 	}
-// }
+/* void DevSt7789vFillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color) */
+/* { */
+/* uint32_t i; */
+/* St7789vSetAddress(x1, y1, x2, y2); */
+/* for (i = 0; i < (x2 - x1 + 1) * (y2 - y1 + 1); i++) */
+/* { */
+/* St7789vSendData2Bytes(color); */
+/* } */
+/* } */
 void DevSt7789vFillRect(uint16_t color)
 {
 	uint32_t i;
@@ -189,32 +214,32 @@ void DevSt7789vFillRect(uint16_t color)
 
 
 
-// /**
-//  * @brief  画线（Bresenham 算法）
-//  * @param[in] x1,y1  起点坐标
-//  * @param[in] x2,y2  终点坐标
-//  * @param[in] color  线的颜色（RGB565）
-//  */
+/* /** */
+/* * @brief  画线（Bresenham 算法） */
+/* * @param[in] x1,y1  起点坐标 */
+/* * @param[in] x2,y2  终点坐标 */
+/* * @param[in] color  线的颜色（RGB565） */
+/* */ */
 void DevSt7789vDrawLine(uint16_t x1,uint16_t y1,uint16_t x2,uint16_t y2,uint16_t color)
 {
 	uint16_t t; 
 	int xerr=0,yerr=0,delta_x,delta_y,distance;
 	int incx,incy,uRow,uCol;
-	delta_x=x2-x1; //计算坐标增量 
+	delta_x=x2-x1; /* 计算坐标增量 */
 	delta_y=y2-y1;
-	uRow=x1;//画线起点坐标
+	uRow=x1; /* 画线起点坐标 */
 	uCol=y1;
-	if(delta_x>0)incx=1; //设置单步方向 
-	else if (delta_x==0)incx=0;//垂直线 
+	if(delta_x>0)incx=1; /* 设置单步方向 */
+	else if (delta_x==0)incx=0; /* 垂直线 */
 	else {incx=-1;delta_x=-delta_x;}
 	if(delta_y>0)incy=1;
-	else if (delta_y==0)incy=0;//水平线 
+	else if (delta_y==0)incy=0; /* 水平线 */
 	else {incy=-1;delta_y=-delta_y;}
-	if(delta_x>delta_y)distance=delta_x; //选取基本增量坐标轴 
+	if(delta_x>delta_y)distance=delta_x; /* 选取基本增量坐标轴 */
 	else distance=delta_y;
 	for(t=0;t<distance+1;t++)
 	{
-		DevSt7789vDrawPoint(uRow,uCol,color);//画点
+		DevSt7789vDrawPoint(uRow,uCol,color); /* 画点 */
 		xerr+=delta_x;
 		yerr+=delta_y;
 		if(xerr>distance)
@@ -231,12 +256,12 @@ void DevSt7789vDrawLine(uint16_t x1,uint16_t y1,uint16_t x2,uint16_t y2,uint16_t
 }
 
 
-// /**
-//  * @brief  画空心矩形
-//  * @param[in] x1,y1  左上角坐标
-//  * @param[in] x2,y2  右下角坐标
-//  * @param[in] color  边框颜色（RGB565）
-//  */
+/* /** */
+/* * @brief  画空心矩形 */
+/* * @param[in] x1,y1  左上角坐标 */
+/* * @param[in] x2,y2  右下角坐标 */
+/* * @param[in] color  边框颜色（RGB565） */
+/* */ */
 void DevSt7789vDrawRectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,uint16_t color)
 {
 	DevSt7789vDrawLine(x1,y1,x2,y1,color);
@@ -246,28 +271,28 @@ void DevSt7789vDrawRectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,
 }
 
 
-// /**
-//  * @brief  画空心圆（Bresenham 算法）
-//  * @param[in] x0,y0  圆心坐标
-//  * @param[in] r      半径（像素）
-//  * @param[in] color  圆的颜色（RGB565）
-//  */
+/* /** */
+/* * @brief  画空心圆（Bresenham 算法） */
+/* * @param[in] x0,y0  圆心坐标 */
+/* * @param[in] r      半径（像素） */
+/* * @param[in] color  圆的颜色（RGB565） */
+/* */ */
 void DevSt7789vDrawCircle(uint16_t x0,uint16_t y0,uint8_t r,uint16_t color)
 {
 	int a,b;
 	a=0;b=r;	  
 	while(a<=b)
 	{
-		DevSt7789vDrawPoint(x0-b,y0-a,color);             //3           
-		DevSt7789vDrawPoint(x0+b,y0-a,color);             //0           
-		DevSt7789vDrawPoint(x0-a,y0+b,color);             //1                
-		DevSt7789vDrawPoint(x0-a,y0-b,color);             //2             
-		DevSt7789vDrawPoint(x0+b,y0+a,color);             //4               
-		DevSt7789vDrawPoint(x0+a,y0-b,color);             //5
-		DevSt7789vDrawPoint(x0+a,y0+b,color);             //6 
-		DevSt7789vDrawPoint(x0-b,y0+a,color);             //7
+		DevSt7789vDrawPoint(x0-b,y0-a,color); /* 3 */
+		DevSt7789vDrawPoint(x0+b,y0-a,color); /* 0 */
+		DevSt7789vDrawPoint(x0-a,y0+b,color); /* 1 */
+		DevSt7789vDrawPoint(x0-a,y0-b,color); /* 2 */
+		DevSt7789vDrawPoint(x0+b,y0+a,color); /* 4 */
+		DevSt7789vDrawPoint(x0+a,y0-b,color); /* 5 */
+		DevSt7789vDrawPoint(x0+a,y0+b,color); /* 6 */
+		DevSt7789vDrawPoint(x0-b,y0+a,color); /* 7 */
 		a++;
-		if((a*a+b*b)>(r*r))//判断要画的点是否过远
+		if((a*a+b*b)>(r*r)) /* 判断要画的点是否过远 */
 		{
 			b--;
 		}
@@ -336,6 +361,12 @@ uint8_t DevSt7789vShowImg(const uint8_t *pu8Img)
 }
 
 
+/**
+ * @brief DevSt7789vInit 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 void DevSt7789vInit(void)
 {
 
@@ -354,7 +385,7 @@ void DevSt7789vInit(void)
     St7789vSetDir(ST7789V_USE_HORIZONTAL);
     St7789vSendCmd(0x3a);
     St7789vSendData(0x05); /* Match the verified module's 16-bit control-interface format. */
-    //--------------------------------ST7789V Frame rate setting-----------------
+    /* --------------------------------ST7789V Frame rate setting----------------- */
 
     St7789vSendCmd(0xb2);
     St7789vSendData(0x0c);
@@ -364,16 +395,16 @@ void DevSt7789vInit(void)
     St7789vSendData(0x33);
     St7789vSendCmd(0xb7);
     St7789vSendData(0x35);
-    //---------------------------------ST7789V Power setting---------------------
+    /* ---------------------------------ST7789V Power setting--------------------- */
 
     St7789vSendCmd(0xbb);
-    St7789vSendData(0x19); // 0x28
+    St7789vSendData(0x19); /* 0x28 */
     St7789vSendCmd(0xc0);
     St7789vSendData(0x2c);
     St7789vSendCmd(0xc2);
     St7789vSendData(0x01);
     St7789vSendCmd(0xc3);
-    St7789vSendData(0x12); // 0x10
+    St7789vSendData(0x12); /* 0x10 */
     St7789vSendCmd(0xc4);
     St7789vSendData(0x20);
     St7789vSendCmd(0xc6);
@@ -381,38 +412,38 @@ void DevSt7789vInit(void)
     St7789vSendCmd(0xd0);
     St7789vSendData(0xa4);
     St7789vSendData(0xa1);
-    //--------------------------------ST7789V gamma setting----------------------
+    /* --------------------------------ST7789V gamma setting---------------------- */
 
     St7789vSendCmd(0xe0);
     St7789vSendData(0xd0);
-    St7789vSendData(0x04); // 0x00
-    St7789vSendData(0x0d); // 0x02
-    St7789vSendData(0x11); // 0x07
-    St7789vSendData(0x13); // 0x0a
-    St7789vSendData(0x2b); // 0x28
-    St7789vSendData(0x3f); // 0x32
-    St7789vSendData(0x54); // 0x44
-    St7789vSendData(0x4c); // 0x42
-    St7789vSendData(0x18); // 0x06
-    St7789vSendData(0x0d); // 0x0e
-    St7789vSendData(0x0b); // 0x12
-    St7789vSendData(0x1f); // 0x14
-    St7789vSendData(0x23); // 0x17
+    St7789vSendData(0x04); /* 0x00 */
+    St7789vSendData(0x0d); /* 0x02 */
+    St7789vSendData(0x11); /* 0x07 */
+    St7789vSendData(0x13); /* 0x0a */
+    St7789vSendData(0x2b); /* 0x28 */
+    St7789vSendData(0x3f); /* 0x32 */
+    St7789vSendData(0x54); /* 0x44 */
+    St7789vSendData(0x4c); /* 0x42 */
+    St7789vSendData(0x18); /* 0x06 */
+    St7789vSendData(0x0d); /* 0x0e */
+    St7789vSendData(0x0b); /* 0x12 */
+    St7789vSendData(0x1f); /* 0x14 */
+    St7789vSendData(0x23); /* 0x17 */
     St7789vSendCmd(0xe1);
-    St7789vSendData(0xd0); // 0xd0
-    St7789vSendData(0x04); // 0x00
-    St7789vSendData(0x0c); // 0x02
-    St7789vSendData(0x11); // 0x07
-    St7789vSendData(0x13); // 0x0a
-    St7789vSendData(0x2c); // 0x28
-    St7789vSendData(0x3f); // 0x31
-    St7789vSendData(0x44); // 0x54
-    St7789vSendData(0x51); // 0x47
-    St7789vSendData(0x2f); // 0x0e
-    St7789vSendData(0x1f); // 0x1c
-    St7789vSendData(0x1f); // 0x17
-    St7789vSendData(0x20); // 0x1b
-    St7789vSendData(0x23); // 0x1e
+    St7789vSendData(0xd0); /* 0xd0 */
+    St7789vSendData(0x04); /* 0x00 */
+    St7789vSendData(0x0c); /* 0x02 */
+    St7789vSendData(0x11); /* 0x07 */
+    St7789vSendData(0x13); /* 0x0a */
+    St7789vSendData(0x2c); /* 0x28 */
+    St7789vSendData(0x3f); /* 0x31 */
+    St7789vSendData(0x44); /* 0x54 */
+    St7789vSendData(0x51); /* 0x47 */
+    St7789vSendData(0x2f); /* 0x0e */
+    St7789vSendData(0x1f); /* 0x1c */
+    St7789vSendData(0x1f); /* 0x17 */
+    St7789vSendData(0x20); /* 0x1b */
+    St7789vSendData(0x23); /* 0x1e */
 
     St7789vSendCmd(0x21);
     St7789vSendCmd(0x29);
@@ -422,11 +453,11 @@ void DevSt7789vInit(void)
        顺序不能反：两块都排进同一帧后 Show() 才会开始发送，
        否则底色会把图片盖掉。 */
 	(void)DevSt7789vFillScreenStart(COLOR_GREEN);
-    // (void)DevSt7789vShowImg(gau8ImgXjBw[0]);
+    /* (void)DevSt7789vShowImg(gau8ImgXjBw[0]); */
     (void)DevSt7789vShow();
-    // DevSt7789vFillRect(ST7789V_RED);
-	// DevSt7789vDrawPoint(5, 5, ST7789V_BLUE);
-	// DevSt7789vDrawCircle((ST7789V_WIDTH/2), (ST7789V_HEIGHT/2), (ST7789V_HEIGHT/2), ST7789V_GREEN);
+    /* DevSt7789vFillRect(ST7789V_RED); */
+	/* DevSt7789vDrawPoint(5, 5, ST7789V_BLUE); */
+	/* DevSt7789vDrawCircle((ST7789V_WIDTH/2), (ST7789V_HEIGHT/2), (ST7789V_HEIGHT/2), ST7789V_GREEN); */
 }
 
 
@@ -822,6 +853,12 @@ uint8_t DevSt7789vShow(void)
 #endif
 }
 
+/**
+ * @brief DevSt7789vService 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 void DevSt7789vService(void)
 {
 #if (ST7789V_USE_DMA == 0)
@@ -900,6 +937,12 @@ void DevSt7789vService(void)
 #endif /* ST7789V_USE_DMA */
 }
 
+/**
+ * @brief DevSt7789vTask 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint16_t DevSt7789vTask(void)
 {
     PT_BEGIN()
