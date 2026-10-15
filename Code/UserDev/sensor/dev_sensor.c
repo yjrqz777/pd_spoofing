@@ -1,3 +1,12 @@
+/**
+ * @file dev_sensor.c
+ * @brief 传感器设备层接口与实现。
+ * @author 段志炫
+ * @date 2026-10-15
+ * @version 0.1.1
+ * @par 修改记录
+ * 2026-10-15 按项目规范补充中文 Doxygen 注释。
+ */
 #include "dev_sensor.h"
 #include "UserBsp/bsp_adc.h"
 
@@ -5,22 +14,46 @@ static float Vbus, Vout, Ibus, Pow;
 
 
 
+/**
+ * @brief DevSensorConvertVbus 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 float DevSensorConvertVbus(void)
 {
     return BspAdcGetRaw(E_BSP_ADC_VBUS) * BOARD_VOUT_CODE_TO_V;
 }
 
+/**
+ * @brief DevSensorConvertVout 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 float DevSensorConvertVout(void)
 {
     return BspAdcGetRaw(E_BSP_ADC_VOUT) * BOARD_VBUS_CODE_TO_V;
 }
 
+/**
+ * @brief DevSensorConvertIbus 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 float DevSensorConvertIbus(void)
 {
     return BspAdcGetRaw(E_BSP_ADC_IBUS) * BOARD_IBUS_CODE_TO_A;
 }
 
 
+/**
+ * @brief DevSensorGetValue 接口处理函数。
+ * @param[in] chx 参数值，单位和范围按接口定义。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 float DevSensorGetValue(eDevChannelDef chx)
 {
     float vlaue = 0;
@@ -46,6 +79,12 @@ float DevSensorGetValue(eDevChannelDef chx)
 }
 
 
+/**
+ * @brief DevSensorDrocess 接口处理函数。
+无输入参数。
+ * @return 无返回值。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 static void DevSensorDrocess(void)
 {
     tFilterEma vBusFilter, vOutFilter, iBusFilter;
@@ -63,6 +102,12 @@ static void DevSensorDrocess(void)
 
 
 
+/**
+ * @brief DevSensorTask 接口处理函数。
+无输入参数。
+ * @return 返回状态或计算结果，具体含义见返回值定义。
+ * @note 调用时应遵循模块初始化顺序与运行上下文要求。
+ */
 uint16_t DevSensorTask(void)
 {
     PT_BEGIN()
