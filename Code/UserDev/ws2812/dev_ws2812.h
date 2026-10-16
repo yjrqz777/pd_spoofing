@@ -16,7 +16,7 @@ extern "C" {
 
 #include "user_global.h"
 
-#define DEV_WS2812_FRAME_LEN   ((WS2812_PIXEL_NUM) * 3u)   /**< GRB 字节数：4 颗 -> 12 */
+#define DEV_WS2812_FRAME_LEN   ((WS2812_PIXEL_NUM) * 3u)   /* GRB 字节数：4 颗 -> 12 */
 
 void       DevWs2812Init(void);
 /**
