@@ -27,31 +27,31 @@ extern "C" {
 #include "UserBsp/bsp_gpio.h"      /* eBspButtonIdDef：键值掩码 E_BSP_KEY_x */
 
 /* 扫描与判定参数（单位 ms） */
-#define DEV_BTN_SCAN_MS       (5u)                          /**< 扫描间隔 */
-#define DEV_BTN_QUEUE_SIZE    (16u)                         /**< SPSC 事件队列深度（条目数） */
-#define DEV_BTN_DEBOUNCE_NUM  (2u)                          /**< 消抖采样次数 */
-#define DEV_BTN_CLICK_WINDOW  (100u / DEV_BTN_SCAN_MS)      /**< 多击判定窗口 */
-#define DEV_BTN_LONG_TICKS    (1000u / DEV_BTN_SCAN_MS)     /**< 长按判定阈值 */
-#define DEV_BTN_REPEAT_MAX    (2u)                          /**< 连击计数上限 */
-#define DEV_BTN_HOLD_UPDATA    (100u)      /**< 长按持续上报节流：100ms 一次 */
-#define DEV_BTN_HOLD_DIV      (DEV_BTN_HOLD_UPDATA / DEV_BTN_SCAN_MS)      /**< 长按持续上报节流：100ms 一次 */
-#define DEV_BTN_PRESSED       (1u)                          /**< 已消抖的按下状态：1=按下，0=未按下 */
-#define DEV_BTN_NUM_MAX      (10) /**< 按键表行数上限：一条（键值, 事件）订阅占一行 */
+#define DEV_BTN_SCAN_MS       (5u)                          /* 扫描间隔 */
+#define DEV_BTN_QUEUE_SIZE    (16u)                         /* SPSC 事件队列深度（条目数） */
+#define DEV_BTN_DEBOUNCE_NUM  (2u)                          /* 消抖采样次数 */
+#define DEV_BTN_CLICK_WINDOW  (100u / DEV_BTN_SCAN_MS)      /* 多击判定窗口 */
+#define DEV_BTN_LONG_TICKS    (1000u / DEV_BTN_SCAN_MS)     /* 长按判定阈值 */
+#define DEV_BTN_REPEAT_MAX    (2u)                          /* 连击计数上限 */
+#define DEV_BTN_HOLD_UPDATA    (100u)      /* 长按持续上报节流：100ms 一次 */
+#define DEV_BTN_HOLD_DIV      (DEV_BTN_HOLD_UPDATA / DEV_BTN_SCAN_MS)      /* 长按持续上报节流：100ms 一次 */
+#define DEV_BTN_PRESSED       (1u)                          /* 已消抖的按下状态：1=按下，0=未按下 */
+#define DEV_BTN_NUM_MAX      (10) /* 按键表行数上限：一条（键值, 事件）订阅占一行 */
 
 /* 键值掩码只用 BSP 的 eBspButtonIdDef（E_BSP_KEY_x），本层不另立一套编号 */
 
 /* 按键事件（E_DEV_BTN_NONE 必须为 0） */
 typedef enum
 {
-    E_DEV_BTN_NONE = 0,      /**< 无事件 */
-    E_DEV_BTN_DOWN,          /**< 按下 */
-    E_DEV_BTN_UP,            /**< 抬起 */
-    E_DEV_BTN_REPEAT,        /**< 连击中的再次按下 */
-    E_DEV_BTN_SINGLE_CLICK,  /**< 单击 */
-    E_DEV_BTN_DOUBLE_CLICK,  /**< 双击 */
-    E_DEV_BTN_LONG_PRESS,    /**< 长按开始 */
-    E_DEV_BTN_LONG_HOLD,     /**< 长按持续（每 100ms 上报一次） */
-    E_DEV_BTN_COUNT          /**< 事件总数（边界标记） */
+    E_DEV_BTN_NONE = 0,      /* 无事件 */
+    E_DEV_BTN_DOWN,          /* 按下 */
+    E_DEV_BTN_UP,            /* 抬起 */
+    E_DEV_BTN_REPEAT,        /* 连击中的再次按下 */
+    E_DEV_BTN_SINGLE_CLICK,  /* 单击 */
+    E_DEV_BTN_DOUBLE_CLICK,  /* 双击 */
+    E_DEV_BTN_LONG_PRESS,    /* 长按开始 */
+    E_DEV_BTN_LONG_HOLD,     /* 长按持续（每 100ms 上报一次） */
+    E_DEV_BTN_COUNT          /* 事件总数（边界标记） */
 } eDevButtonEventDef;
 
 /**
