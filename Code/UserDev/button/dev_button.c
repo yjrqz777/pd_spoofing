@@ -283,12 +283,54 @@ static void DevButtonHandler(tDevButtonDef *button, uint16_t pressedMask)
 }
 
 /**
- * @brief 采样按键并推进订阅状态机
- * @param[in] 无 无输入参数。
- * @return 函数执行结果或查询值，取值含义见函数说明。
- * @note 调用前确认参数有效，并在模块规定的上下文中调用。
+ * @brief 按键节拍回调，按扫描周期采样并推进活动订阅。
+ * @param[in] 无输入参数。
+ * @return 无返回值。
+ * @note 由 1 ms 定时中断调用，只处理当前按下或状态机未空闲的订阅。
  */
-ERT(sButtonNum == 0u);
+static void DevButtonTickHandler(void)
+{
+    static uint8_t timeCount = 0u;
+    uint8_t index = 0;
+    uint16_t keyValue = 0u;
+
+    if (++timeCount < (uint8_t)DEV_BTN_SCAN_MS)
+    {
+        return;
+    }
+    timeCount = 0u;
+
+    /* 本轮的按键掩码只取一次，所有行共用这一份采样 */
+    keyValue = DevButtonReadKeyValue();
+
+    for (index = 0u; index < sButtonNum; index++)
+    {
+        if (((keyValue & tButton[index].keyValue) == 0u) &&
+            (tButton[index].state == (uint8_t)E_DEV_BTN_STATE_IDLE))
+        {
+            continue;                                   /* 本行没活动：本轮不扫 */
+        }
+
+        DevButtonHandler(&tButton[index], keyValue);
+    }
+}
+
+/* ========================================================================== *
+ *  以下为主循环上下文代码
+ * ========================================================================== */
+
+/**
+ * @brief 初始化按键订阅表和事件队列。
+ * @param[in] 无输入参数。
+ * @return 无返回值。
+ * @note 必须在注册按键事件及启动扫描之前调用。
+ */
+void DevButtonInit(void)
+{
+    /* 顺序检查，两条都为的是把"清表必须排在注册和扫描之前"这一步钉死：
+       - 表里已经有行 = 先注册后 Init，这次清表会把刚注册的订阅全吃掉；
+       - 已经开扫 = 中断正在扫这张表，边扫边清会读到半成品行。 */
+    ASSERT(sButtonNum == 0u);
     ASSERT(sStarted == 0u);
 
     memset(tButton, 0, sizeof(tButton));
