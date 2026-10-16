@@ -9,7 +9,7 @@
  */
 
 #ifndef _DEV_FLASH_H_
-#define _DEV_FLASH_H_ /**< 防止头文件被重复包含。 */
+#define _DEV_FLASH_H_ /* 防止头文件被重复包含。 */
 
 /* ========================================================================== */
 /* 依赖声明 */
@@ -21,15 +21,15 @@
 /* Flash 地址与容量定义 */
 /* ========================================================================== */
 
-#define FLASH_BASE_ADDR       (0x08000000UL) /**< CH32X035 Flash 别名区基地址，链接地址 0x00000000 映射同一片物理 Flash。 */
-#define FLASH_PAGE_SIZE       (256UL) /**< Flash 单页容量，单位：字节，固定为 256 字节。 */
-#define FLASH_PAGE_ADDR(n)    (FLASH_BASE_ADDR + ((uint32_t)(n) * FLASH_PAGE_SIZE)) /**< 根据页号计算页起始地址，n 单位为页，范围为 0 至 247。 */
+#define FLASH_BASE_ADDR       (0x08000000UL) /* CH32X035 Flash 别名区基地址，链接地址 0x00000000 映射同一片物理 Flash。 */
+#define FLASH_PAGE_SIZE       (256UL) /* Flash 单页容量，单位：字节，固定为 256 字节。 */
+#define FLASH_PAGE_ADDR(n)    (FLASH_BASE_ADDR + ((uint32_t)(n) * FLASH_PAGE_SIZE)) /* 根据页号计算页起始地址，n 单位为页，范围为 0 至 247。 */
 
-#define DEV_FLASH_MAIN_PAGE   (246U) /**< 主区页号，单位：页，取值：246。 */
-#define DEV_FLASH_BACKUP_PAGE (247U) /**< 备份区页号，单位：页，取值：247。 */
-#define DEV_FLASH_MAIN_ADDR   FLASH_PAGE_ADDR(DEV_FLASH_MAIN_PAGE) /**< 主区起始地址：0x0800F600。 */
-#define DEV_FLASH_BACKUP_ADDR FLASH_PAGE_ADDR(DEV_FLASH_BACKUP_PAGE) /**< 备份区起始地址：0x0800F700。 */
-#define DEV_FLASH_REGION_SIZE ((uint16_t)FLASH_PAGE_SIZE) /**< 单个存储区容量，单位：字节，固定为 256。 */
+#define DEV_FLASH_MAIN_PAGE   (246U) /* 主区页号，单位：页，取值：246。 */
+#define DEV_FLASH_BACKUP_PAGE (247U) /* 备份区页号，单位：页，取值：247。 */
+#define DEV_FLASH_MAIN_ADDR   FLASH_PAGE_ADDR(DEV_FLASH_MAIN_PAGE) /* 主区起始地址：0x0800F600。 */
+#define DEV_FLASH_BACKUP_ADDR FLASH_PAGE_ADDR(DEV_FLASH_BACKUP_PAGE) /* 备份区起始地址：0x0800F700。 */
+#define DEV_FLASH_REGION_SIZE ((uint16_t)FLASH_PAGE_SIZE) /* 单个存储区容量，单位：字节，固定为 256。 */
 
 /* ========================================================================== */
 /* 存储区与操作状态 */
@@ -40,8 +40,8 @@
  */
 typedef enum
 {
-    DEV_FLASH_REGION_MAIN = 0, /**< 主区选择值，枚举值：0，无单位；映射第 246 页。 */
-    DEV_FLASH_REGION_BACKUP   /**< 备份区选择值，枚举值：1，无单位；映射第 247 页。 */
+    DEV_FLASH_REGION_MAIN = 0, /* 主区选择值，枚举值：0，无单位；映射第 246 页。 */
+    DEV_FLASH_REGION_BACKUP   /* 备份区选择值，枚举值：1，无单位；映射第 247 页。 */
 } dev_flash_region_t;
 
 /**
@@ -49,10 +49,10 @@ typedef enum
  */
 typedef enum
 {
-    DEV_FLASH_OK = 0,       /**< 成功状态，枚举值：0，无单位。 */
-    DEV_FLASH_ERROR_PARAM,  /**< 参数错误状态，枚举值：1，无单位。 */
-    DEV_FLASH_ERROR_HW,     /**< 硬件错误状态，枚举值：2，无单位。 */
-    DEV_FLASH_ERROR_VERIFY  /**< 校验错误状态，枚举值：3，无单位。 */
+    DEV_FLASH_OK = 0,       /* 成功状态，枚举值：0，无单位。 */
+    DEV_FLASH_ERROR_PARAM,  /* 参数错误状态，枚举值：1，无单位。 */
+    DEV_FLASH_ERROR_HW,     /* 硬件错误状态，枚举值：2，无单位。 */
+    DEV_FLASH_ERROR_VERIFY  /* 校验错误状态，枚举值：3，无单位。 */
 } dev_flash_status_t;
 
 /* ========================================================================== */
