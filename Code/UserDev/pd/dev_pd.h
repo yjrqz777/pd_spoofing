@@ -55,31 +55,31 @@ extern "C" {
 typedef enum
 {
     E_DEV_PD_PDO_FIXED = 0u,   /* 固定电压档 */
-    E_DEV_PD_PDO_BATTERY,      /**< 电池档 */
-    E_DEV_PD_PDO_VARIABLE,     /**< 可变电压档 */
-    E_DEV_PD_PDO_APDO,         /**< 可调电压档（PPS） */
+    E_DEV_PD_PDO_BATTERY,      /* 电池档 */
+    E_DEV_PD_PDO_VARIABLE,     /* 可变电压档 */
+    E_DEV_PD_PDO_APDO,         /* 可调电压档（PPS） */
     E_DEV_PD_PDO_TYPE_MAX
 } eDevPdPdoTypeDef;
 
 /** @brief 从能力报文里解析出来的一个档位 */
 typedef struct
 {
-    uint8_t          u8PdoIndex;      /**< 在能力报文里的序号，发请求时用它 */
-    eDevPdPdoTypeDef eType;           /**< 电源类型 */
-    uint16_t         u16MinVoltageMv; /**< 最小电压；固定档等于标称电压 */
-    uint16_t         u16MaxVoltageMv; /**< 最大电压；固定档与最小相同 */
-    uint16_t         u16MaxCurrentMa; /**< 最大电流 */
+    uint8_t          u8PdoIndex;      /* 在能力报文里的序号，发请求时用它 */
+    eDevPdPdoTypeDef eType;           /* 电源类型 */
+    uint16_t         u16MinVoltageMv; /* 最小电压；固定档等于标称电压 */
+    uint16_t         u16MaxVoltageMv; /* 最大电压；固定档与最小相同 */
+    uint16_t         u16MaxCurrentMa; /* 最大电流 */
 } tDevPdPdoDef;
 
 /** @brief 协商状态 */
 typedef enum
 {
-    E_DEV_PD_IDLE = 0u,     /**< 未连接或未开始 */
-    E_DEV_PD_WAIT_SRC_CAP,  /**< 已连接，等能力报文 */
-    E_DEV_PD_WAIT_ACCEPT,   /**< 已发请求，等对方接受 */
-    E_DEV_PD_WAIT_PS_RDY,   /**< 已接受，等电源就绪 */
-    E_DEV_PD_READY,         /**< 协商完成，电压已到位 */
-    E_DEV_PD_ERROR,         /**< 协商失败：超时、被拒、或收到软复位 */
+    E_DEV_PD_IDLE = 0u,     /* 未连接或未开始 */
+    E_DEV_PD_WAIT_SRC_CAP,  /* 已连接，等能力报文 */
+    E_DEV_PD_WAIT_ACCEPT,   /* 已发请求，等对方接受 */
+    E_DEV_PD_WAIT_PS_RDY,   /* 已接受，等电源就绪 */
+    E_DEV_PD_READY,         /* 协商完成，电压已到位 */
+    E_DEV_PD_ERROR,         /* 协商失败：超时、被拒、或收到软复位 */
     E_DEV_PD_STATE_MAX
 } eDevPdStateDef;
 
