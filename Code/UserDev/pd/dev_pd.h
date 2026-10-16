@@ -54,7 +54,7 @@ extern "C" {
 /** @brief 电源类型（USB-PD 的四种 PDO） */
 typedef enum
 {
-    E_DEV_PD_PDO_FIXED = 0u,   /**< 固定电压档 */
+    E_DEV_PD_PDO_FIXED = 0u,   /* 固定电压档 */
     E_DEV_PD_PDO_BATTERY,      /**< 电池档 */
     E_DEV_PD_PDO_VARIABLE,     /**< 可变电压档 */
     E_DEV_PD_PDO_APDO,         /**< 可调电压档（PPS） */
